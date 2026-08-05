@@ -1,0 +1,50 @@
+.how-it-works {
+  padding: 80px;
+  background: #ffffff;
+  text-align: center;
+}
+
+.how-it-works h2 {
+  font-size: 42px;
+  color: #2416a8;
+  margin-bottom: 60px;
+}
+
+.steps {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  flex-wrap: wrap;
+}
+
+.step {
+  width: 250px;
+  padding: 30px;
+  border-radius: 15px;
+  background: #f8f9ff;
+  box-shadow: 0 8px 20px rgba(0,0,0,.08);
+}
+
+.number {
+  width: 60px;
+  height: 60px;
+  margin: auto;
+  border-radius: 50%;
+  background: #2416a8;
+  color: white;
+  font-size: 24px;
+  font-weight: bold;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.step h3 {
+  color: #2416a8;
+  margin-bottom: 10px;
+}
+
+.step p {
+  color: #666;
+}

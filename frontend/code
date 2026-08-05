@@ -1,0 +1,19 @@
+function Navbar() {
+  return (
+    <nav>
+      <h2>SEIS</h2>
+
+      <ul>
+        <li>Home</li>
+        <li>About</li>
+        <li>Features</li>
+        <li>Documentation</li>
+        <li>Contact</li>
+      </ul>
+
+      <button>Login</button>
+    </nav>
+  );
+}
+
+export default Navbar;
