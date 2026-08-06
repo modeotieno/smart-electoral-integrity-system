@@ -2,7 +2,7 @@ import "./Hero.css";
 
 function Hero() {
   return (
-    <section className="hero">
+    <section id="home" className="hero">
       <div className="hero-text">
         <h1>Smart Electoral Integrity System</h1>
 

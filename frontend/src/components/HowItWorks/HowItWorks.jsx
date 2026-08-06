@@ -2,7 +2,7 @@ import "./HowItWorks.css";
 
 function HowItWorks() {
   return (
-    <section className="how-it-works">
+    <section id="how-it-works" className="how-it-works">
       <h2>How It Works</h2>
 
       <div className="steps">
