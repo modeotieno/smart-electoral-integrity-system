@@ -1,52 +1,86 @@
+import "./About.css";
+import {
+  FaShieldAlt,
+  FaLock,
+  FaCheckCircle,
+} from "react-icons/fa";
+
 function About() {
   return (
-    <div>
-      <section>
-        <h1>About Smart Electoral Integrity System</h1>
+    <section className="about">
+
+      <div className="about-left">
+
+        <span className="about-tag">
+          About SEIS
+        </span>
+
+        <h2>
+          Revolutionizing Electoral
+          Integrity Through
+          Technology
+        </h2>
 
         <p>
-          The Smart Electoral Integrity System is a secure digital platform
-          designed to demonstrate how technology can improve transparency,
-          accountability, and trust in electoral processes.
+          The Smart Electoral Integrity System (SEIS) provides a secure,
+          transparent and verifiable digital voting platform designed
+          to increase trust in elections through modern technology.
         </p>
 
-        <p>
-          The system focuses on secure voter authentication, transparent
-          result verification, audit tracking, and reliable communication
-          between electoral stakeholders.
-        </p>
+        <div className="about-features">
 
-        <h2>Our Vision</h2>
+          <div className="feature">
+            <FaShieldAlt className="feature-icon" />
+            <div>
+              <h4>Secure Voting</h4>
+              <p>Encrypted ballots and secure authentication.</p>
+            </div>
+          </div>
 
-        <p>
-          To create a future where elections are more transparent, secure,
-          and verifiable through responsible use of technology.
-        </p>
+          <div className="feature">
+            <FaLock className="feature-icon" />
+            <div>
+              <h4>Data Protection</h4>
+              <p>Every vote is stored safely and cannot be altered.</p>
+            </div>
+          </div>
 
-        <h2>Our Mission</h2>
+          <div className="feature">
+            <FaCheckCircle className="feature-icon" />
+            <div>
+              <h4>Verified Results</h4>
+              <p>Transparent counting with instant verification.</p>
+            </div>
+          </div>
 
-        <p>
-          To provide a demonstration platform that explores modern solutions
-          for improving election integrity while protecting voter privacy and
-          maintaining trust in democratic processes.
-        </p>
+        </div>
 
-        <h2>Key Principles</h2>
+        <button className="learn-btn">
+          Learn More
+        </button>
 
-        <ul>
-          <li>Security - Protecting electoral data from unauthorized access.</li>
-          <li>
-            Transparency - Allowing authorized stakeholders to verify processes.
-          </li>
-          <li>
-            Accountability - Maintaining records through audit logs.
-          </li>
-          <li>
-            Privacy - Protecting voter information and personal data.
-          </li>
-        </ul>
-      </section>
-    </div>
+      </div>
+
+      <div className="about-right">
+
+        <div className="dashboard-card">
+
+          <div className="dashboard-title"></div>
+
+          <div className="dashboard-bars">
+
+            <div className="bar bar1"></div>
+            <div className="bar bar2"></div>
+            <div className="bar bar3"></div>
+            <div className="bar bar4"></div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
   );
 }
 

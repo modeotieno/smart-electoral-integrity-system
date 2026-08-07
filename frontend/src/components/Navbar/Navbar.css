@@ -1,109 +1,69 @@
-*{
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
+.navbar {
+  background: #071B36;
+  height: 90px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 80px;
 }
 
-.navbar{
-    position:sticky;
-    top:0;
-    z-index:1000;
-
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-
-    padding:18px 8%;
-
-    background:white;
-
-    box-shadow:0 2px 15px rgba(0,0,0,.08);
+.logo h2 {
+  color: white;
+  font-size: 40px;
+  margin: 0;
 }
 
-.logo{
-    display:flex;
-    align-items:center;
-    gap:15px;
+.logo p {
+  color: white;
+  font-size: 12px;
+  margin: 0;
+  text-transform: uppercase;
 }
 
-.logo-box{
-    width:55px;
-    height:55px;
-
-    display:flex;
-    align-items:center;
-    justify-content:center;
-
-    background:#2416a8;
-    color:white;
-
-    border-radius:12px;
-
-    font-size:28px;
+.nav-links {
+  display: flex;
+  list-style: none;
+  gap: 35px;
 }
 
-.logo-text h2{
-    font-size:28px;
-    color:#2416a8;
-    margin:0;
+.nav-links a {
+  color: white;
+  text-decoration: none;
+  font-weight: 500;
+  transition: 0.3s;
 }
 
-.logo-text p{
-    font-size:12px;
-    color:#666;
-    margin-top:2px;
+.nav-links a:hover {
+  color: #22C55E;
 }
 
-/* Navigation Links */
-
-.nav-links{
-    display:flex;
-    gap:35px;
-
-    list-style:none;
+.nav-buttons {
+  display: flex;
+  gap: 15px;
 }
 
-.nav-links a{
-    text-decoration:none;
-    color:#444;
-    font-weight:500;
-    transition:.3s;
+.login-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 25px;
+  border: 1px solid white;
+  background: transparent;
+  color: white;
+  border-radius: 8px;
+  cursor: pointer;
 }
 
-.nav-links a:hover{
-    color:#2416a8;
+.start-btn {
+  background: #22C55E;
+  color: white;
+  border: none;
+  padding: 12px 25px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
 }
 
-/* Login Button */
-
-.login-btn{
-    background:#2416a8;
-    color:white;
-
-    text-decoration:none;
-
-    padding:12px 28px;
-
-    border-radius:8px;
-
-    display:flex;
-    align-items:center;
-    justify-content:center;
-
-    transition:.3s;
-}
-
-.login-btn:hover{
-    background:#3f2ed6;
-    transform:translateY(-2px);
-}
-
-/* Responsive */
-
-@media(max-width:900px){
-
-    .nav-links{
-        display:none;
-    }
-
+.start-btn:hover {
+  background: #16a34a;
 }

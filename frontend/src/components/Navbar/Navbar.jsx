@@ -1,57 +1,35 @@
-import { Link } from "react-router-dom";
 import "./Navbar.css";
+import { FaUser } from "react-icons/fa";
 
 function Navbar() {
   return (
     <header className="navbar">
-
       <div className="logo">
-
-  <div className="logo-box">
-    🛡️
-  </div>
-
-  <div className="logo-text">
-    <h2>SEIS</h2>
-    <p>Smart Electoral Integrity System</p>
-  </div>
-
-</div>
+        <h2>SEIS</h2>
+        <p>Smart Electoral Integrity System</p>
+      </div>
 
       <nav>
         <ul className="nav-links">
-
-          <li>
-            <Link to="/">Home</Link>
-          </li>
-
-          <li>
-            <Link to="/about">About</Link>
-          </li>
-
-          <li>
-            <Link to="/features">Features</Link>
-          </li>
-
-          <li>
-            <Link to="/how-it-works">How It Works</Link>
-          </li>
-
-          <li>
-            <Link to="/who-we-serve">Who We Serve</Link>
-          </li>
-
-          <li>
-            <Link to="/contact">Contact</Link>
-          </li>
-
+          <li><a href="#">Home</a></li>
+          <li><a href="#">About</a></li>
+          <li><a href="#">Features</a></li>
+          <li><a href="#">How It Works</a></li>
+          <li><a href="#">Who We Serve</a></li>
+          <li><a href="#">Contact</a></li>
         </ul>
       </nav>
 
-      <Link to="/login" className="login-btn">
-        Login
-      </Link>
+      <div className="nav-buttons">
+        <button className="login-btn">
+          <FaUser />
+          Login
+        </button>
 
+        <button className="start-btn">
+          Get Started
+        </button>
+      </div>
     </header>
   );
 }
