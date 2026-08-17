@@ -10,10 +10,10 @@
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",
-    "vite": "latest",
     "react": "latest",
     "react-dom": "latest",
-    "react-icons": "latest"
-  },
-  "devDependencies": {}
+    "react-icons": "latest",
+    "react-router-dom": "^7.18.2",
+    "vite": "latest"
+  }
 }
