@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: seis-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: seis_db
+      POSTGRES_USER: seis_user
+      POSTGRES_PASSWORD: seis_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

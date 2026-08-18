@@ -1,0 +1,53 @@
+CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    full_name VARCHAR(150) NOT NULL,
+    email VARCHAR(150) UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    role VARCHAR(50) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS elections (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(150) NOT NULL,
+    description TEXT,
+    start_date TIMESTAMP NOT NULL,
+    end_date TIMESTAMP NOT NULL,
+    status VARCHAR(50) DEFAULT 'planned',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS candidates (
+    id SERIAL PRIMARY KEY,
+    election_id INTEGER NOT NULL REFERENCES elections(id) ON DELETE CASCADE,
+    full_name VARCHAR(150) NOT NULL,
+    position VARCHAR(100) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS polling_stations (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(150) NOT NULL,
+    location VARCHAR(200) NOT NULL,
+    registered_voters INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS results (
+    id SERIAL PRIMARY KEY,
+    election_id INTEGER NOT NULL REFERENCES elections(id) ON DELETE CASCADE,
+    candidate_id INTEGER NOT NULL REFERENCES candidates(id) ON DELETE CASCADE,
+    polling_station_id INTEGER NOT NULL REFERENCES polling_stations(id) ON DELETE CASCADE,
+    votes INTEGER NOT NULL DEFAULT 0,
+    submitted_by INTEGER REFERENCES users(id),
+    verified BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS audit_logs (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id),
+    action VARCHAR(150) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
