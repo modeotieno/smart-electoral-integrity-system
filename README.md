@@ -1,5 +1,3 @@
-SEIS demonstrates how modern software engineering can be used to build systems that promote **security, transparency, accountability, verification, and trust** in election-management workflows.
-
 🗳️ Smart Electoral Integrity System (SEIS)
 Secure Elections. Transparent Results. Trusted Democracies.
 The Smart Electoral Integrity System (SEIS) is a demonstration platform that showcases how modern software engineering practices can support secure, transparent, accountable, and verifiable election management.
@@ -369,4 +367,3 @@ Project Vision
 Secure Elections. Transparent Results. Trusted Democracies.
 
 SEIS demonstrates how modern software engineering can be used to build systems that promote security, transparency, accountability, verification, and trust in election-management workflows.
-
