@@ -1,10 +1,3 @@
-Markdown Live Preview
-Reset
-Copy
-Export PDF
-
-486487488489490491492493494495496497498499500501502503504505506507508509510511512513514515516517518519
-
 SEIS demonstrates how modern software engineering can be used to build systems that promote **security, transparency, accountability, verification, and trust** in election-management workflows.
 
 🗳️ Smart Electoral Integrity System (SEIS)
