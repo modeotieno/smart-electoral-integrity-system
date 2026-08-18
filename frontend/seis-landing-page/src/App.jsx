@@ -6,31 +6,33 @@ import {
   FiLock,
   FiMail,
   FiMapPin,
-  FiMenu,
   FiPhone,
   FiPieChart,
   FiSearch,
   FiShield,
   FiUserCheck,
   FiUsers,
+  FiMenu,
   FiX,
+  FiKey,
 } from "react-icons/fi";
+
 import { useState } from "react";
+
 import {
   BrowserRouter as Router,
   Routes,
   Route,
-  useLocation,
+  NavLink,
+  Link,
 } from "react-router-dom";
 
-// External Page Component Imports
 import AboutPage from "./pages/About/About";
 import FeaturesPage from "./pages/Features/Features";
 import ContactPage from "./pages/Contact/Contact";
 
 import "./App.css";
 
-// Nav items targeting exact URL paths
 const navItems = [
   ["Home", "/"],
   ["About", "/about"],
@@ -40,85 +42,68 @@ const navItems = [
   ["Contact", "/contact"],
 ];
 
-// Helper to open relative paths safely in a new browser tab
-const openInNewTab = (path) => {
-  window.open(path, "_blank", "noopener,noreferrer");
-};
+/* =========================
+   NAVBAR
+========================= */
 
 function Logo() {
   return (
-    <a
-      href="/"
-      target="_blank"
-      rel="noopener noreferrer"
-      className="brand"
-      aria-label="SEIS home"
-    >
-      <div className="fingerprint" aria-hidden="true">
+    <Link to="/" className="brand">
+      <div className="fingerprint">
         <span />
         <span />
         <span />
         <span />
       </div>
+
       <div>
         <strong>SEIS</strong>
+
         <small>
           SMART ELECTORAL
           <br />
           INTEGRITY SYSTEM
         </small>
       </div>
-    </a>
+    </Link>
   );
 }
 
 function Navbar() {
   const [open, setOpen] = useState(false);
-  const location = useLocation();
-
-  const handleNavigation = (path) => {
-    setOpen(false);
-    openInNewTab(path);
-  };
 
   return (
     <header className="navbar">
       <Logo />
 
       <nav className={open ? "nav-links open" : "nav-links"}>
-        {navItems.map(([label, path]) => {
-          const isActive = location.pathname === path;
-          return (
-            <button
-              key={path}
-              className={isActive ? "active" : ""}
-              onClick={() => handleNavigation(path)}
-            >
-              {label}
-            </button>
-          );
-        })}
+        {navItems.map(([label, path]) => (
+          <NavLink
+            key={path}
+            to={path}
+            className={({ isActive }) => (isActive ? "active" : "")}
+            onClick={() => setOpen(false)}
+          >
+            {label}
+          </NavLink>
+        ))}
       </nav>
 
       <div className="nav-actions">
-        <button
-          className="login-btn"
-          onClick={() => handleNavigation("/login")}
-        >
-          <FiUserCheck /> Login
-        </button>
-        <button
-          className="green-btn small"
-          onClick={() => handleNavigation("/contact")}
-        >
+        <Link to="/login" className="login-btn">
+          <FiUserCheck />
+          Login
+        </Link>
+
+        <Link to="/contact" className="green-btn small">
           Get Started
-        </button>
+        </Link>
       </div>
 
       <button
         className="mobile-toggle"
-        aria-label="Toggle menu"
         onClick={() => setOpen(!open)}
+        aria-label="Toggle navigation"
       >
         {open ? <FiX /> : <FiMenu />}
       </button>
@@ -126,18 +111,26 @@ function Navbar() {
   );
 }
 
+/* =========================
+   DASHBOARD MOCKUP
+========================= */
+
 function DashboardMockup() {
   return (
     <div className="visual-wrap">
       <div className="network network-one" />
       <div className="network network-two" />
+
       <div className="laptop">
         <div className="laptop-camera" />
+
         <div className="dashboard">
           <aside className="dash-sidebar">
             <div className="dash-logo">
-              <span className="mini-fingerprint" /> SEIS
+              <span className="mini-fingerprint" />
+              SEIS
             </div>
+
             {[
               "Dashboard",
               "Voters",
@@ -145,15 +138,17 @@ function DashboardMockup() {
               "Polling Stations",
               "Results",
               "Reports",
-            ].map((x, i) => (
+            ].map((item, index) => (
               <div
-                className={i === 0 ? "dash-menu selected" : "dash-menu"}
-                key={x}
+                className={index === 0 ? "dash-menu selected" : "dash-menu"}
+                key={item}
               >
-                <FiBarChart2 /> {x}
+                <FiBarChart2 />
+                {item}
               </div>
             ))}
           </aside>
+
           <div className="dash-main">
             <div className="dash-heading">
               <div>
@@ -161,15 +156,18 @@ function DashboardMockup() {
                 <small>General overview of the election</small>
               </div>
             </div>
+
             <div className="dash-cards">
               <div>
                 <small>Registered Voters</small>
                 <b>2.5M+</b>
               </div>
+
               <div>
                 <small>Candidates</small>
                 <b>18</b>
               </div>
+
               <div>
                 <small>Polling Stations</small>
                 <b>1,250</b>
@@ -182,41 +180,47 @@ function DashboardMockup() {
   );
 }
 
+/* =========================
+   HOME CONTENT ONLY
+========================= */
+
 function Hero() {
   return (
     <section className="hero section-dark">
       <div className="hero-copy">
         <span className="badge">Trusted. Transparent. Verifiable.</span>
+
         <h1>
           Smart Electoral
           <br />
           Integrity System
         </h1>
+
         <p>
-          A secure demonstration platform that showcases transparent, verifiable and trustworthy digital elections.
+          A secure demonstration platform that showcases transparent,
+          verifiable and trustworthy digital elections.
         </p>
+
         <div className="hero-buttons">
-          <button
-            className="green-btn"
-            onClick={() => openInNewTab("/contact")}
-          >
-            Get Started <FiArrowRight />
-          </button>
-          <button
-            className="outline-btn"
-            onClick={() => openInNewTab("/about")}
-          >
-            Learn More <FiArrowRight />
-          </button>
+          <Link to="/contact" className="green-btn">
+            Get Started
+            <FiArrowRight />
+          </Link>
+
+          <Link to="/about" className="outline-btn">
+            Learn More
+            <FiArrowRight />
+          </Link>
         </div>
       </div>
+
       <DashboardMockup />
     </section>
   );
 }
 
 function Stats() {
-  const statsList = [
+  const stats = [
     [FiUsers, "2.5M+", "Registered Voters"],
     [FiUserCheck, "18", "Candidates"],
     [FiMapPin, "1,250", "Polling Stations"],
@@ -226,11 +230,12 @@ function Stats() {
   return (
     <section className="stats-wrap">
       <div className="stats-card">
-        {statsList.map(([Icon, value, label]) => (
+        {stats.map(([Icon, value, label]) => (
           <div className="stat" key={label}>
             <div className="stat-icon">
               <Icon />
             </div>
+
             <div>
               <b>{value}</b>
               <span>{label}</span>
@@ -242,25 +247,18 @@ function Stats() {
   );
 }
 
-function HomeAboutSection() {
+function HomeLayout() {
   return (
-    <section className="section about-section">
-      <div className="about-copy">
-        <span className="eyebrow">ABOUT SEIS</span>
-        <h2>Building Trust in Every Vote</h2>
-        <p>
-          SEIS ensures structural transparency and cryptographic integrity across digital validation pipelines.
-        </p>
-        <button
-          className="green-btn"
-          onClick={() => openInNewTab("/about")}
-        >
-          Our Full Vision
-        </button>
-      </div>
-    </section>
+    <>
+      <Hero />
+      <Stats />
+    </>
   );
 }
+
+/* =========================
+   SECTIONS FOR OTHER ROUTES
+========================= */
 
 function FeaturesSection() {
   const features = [
@@ -303,8 +301,7 @@ function FeaturesSection() {
         <h2>Designed for Election Integrity</h2>
         <p>
           SEIS brings together security, transparency and verification to
-          demonstrate how digital election processes can be made more
-          trustworthy.
+          demonstrate trustworthy digital elections.
         </p>
       </div>
 
@@ -314,13 +311,12 @@ function FeaturesSection() {
             <div className="feature-icon">
               <Icon />
             </div>
-
             <h3>{title}</h3>
             <p>{text}</p>
-
-            <button onClick={() => openInNewTab("/features")}>
-              Learn More <FiArrowRight />
-            </button>
+            <Link to="/features">
+              Learn More
+              <FiArrowRight />
+            </Link>
           </div>
         ))}
       </div>
@@ -330,26 +326,10 @@ function FeaturesSection() {
 
 function HowItWorksSection() {
   const steps = [
-    {
-      number: "01",
-      title: "Register",
-      text: "Eligible voters are securely registered within the election system.",
-    },
-    {
-      number: "02",
-      title: "Authenticate",
-      text: "The system verifies the identity and authorization of the user.",
-    },
-    {
-      number: "03",
-      title: "Cast Vote",
-      text: "An authorized voter securely participates in the voting process.",
-    },
-    {
-      number: "04",
-      title: "Verify",
-      text: "Election information passes through verification and integrity checks.",
-    },
+    ["01", "Register", "Eligible voters are securely registered within the election system."],
+    ["02", "Authenticate", "The system verifies the identity and authorization of the user."],
+    ["03", "Cast Vote", "An authorized voter securely participates in the voting process."],
+    ["04", "Verify", "Election information passes through verification and integrity checks."],
   ];
 
   return (
@@ -364,11 +344,11 @@ function HowItWorksSection() {
       </div>
 
       <div className="steps">
-        {steps.map((step) => (
-          <div className="step" key={step.number}>
-            <div className="step-number">{step.number}</div>
-            <h3>{step.title}</h3>
-            <p>{step.text}</p>
+        {steps.map(([number, title, text]) => (
+          <div className="step" key={number}>
+            <div className="step-number">{number}</div>
+            <h3>{title}</h3>
+            <p>{text}</p>
           </div>
         ))}
       </div>
@@ -382,25 +362,21 @@ function WhoWeServeSection() {
       icon: FiUsers,
       title: "Voters",
       text: "Provide voters with a clear and trustworthy digital election experience.",
-      items: ["Secure access", "Vote verification", "Transparent processes"],
     },
     {
       icon: FiUserCheck,
       title: "Election Officials",
       text: "Give authorized officials tools for monitoring election activities.",
-      items: ["Election dashboard", "Results monitoring", "Audit records"],
     },
     {
       icon: FiSearch,
       title: "Observers",
       text: "Support election observation through accessible and verifiable information.",
-      items: ["Process visibility", "Results verification", "Audit information"],
     },
     {
       icon: FiBarChart2,
       title: "Election Administrators",
       text: "Support administrators with structured election management information.",
-      items: ["Polling stations", "Candidate information", "Election statistics"],
     },
   ];
 
@@ -410,110 +386,176 @@ function WhoWeServeSection() {
         <span className="eyebrow">WHO WE SERVE</span>
         <h2>Built for Election Stakeholders</h2>
         <p>
-          SEIS is designed as a demonstration platform for different
-          participants in the election ecosystem.
+          SEIS is designed as a demonstration platform for participants in the
+          election ecosystem.
         </p>
       </div>
 
       <div className="serve-grid">
-        {groups.map(({ icon: Icon, title, text, items }) => (
+        {groups.map(({ icon: Icon, title, text }) => (
           <div className="serve-card" key={title}>
             <div className="serve-icon">
               <Icon />
             </div>
-
             <h3>{title}</h3>
             <p>{text}</p>
-
-            <ul>
-              {items.map((item) => (
-                <li key={item}>
-                  <FiCheck /> {item}
-                </li>
-              ))}
-            </ul>
+            <Link to="/who-we-serve">
+              Learn More
+              <FiArrowRight />
+            </Link>
           </div>
         ))}
       </div>
     </section>
   );
 }
-function ContactSection() {
+
+/* =========================
+   PAGES
+========================= */
+
+function HowItWorksPage() {
   return (
-    <section className="section contact-section">
-      <div className="contact-details">
-        <span className="eyebrow">CONTACT US</span>
-
-        <h2>Have Questions About SEIS?</h2>
-
-        <p>
-          Learn more about our demonstration platform and how it showcases
-          secure, transparent and verifiable election processes.
-        </p>
-
-        <p>
-          <FiMail />
-          otienomodesta505@gmail.communication
-        </p>
-
-        <p>
-          <FiPhone />
-          +254 727822752
-        </p>
-
-        <p>
-          <FiMapPin />
-          Kenya
-        </p>
-      </div>
-
-      <form
-        className="contact-form"
-        onSubmit={(e) => e.preventDefault()}
-      >
-        <input type="text" placeholder="Your Name" />
-        <input type="email" placeholder="Your Email" />
-        <input type="text" placeholder="Subject" />
-        <textarea
-          rows="5"
-          placeholder="Your Message"
-        />
-
-        <button className="green-btn" type="submit">
-          Send Message <FiArrowRight />
-        </button>
-      </form>
+    <section className="section page-section">
+      <HowItWorksSection />
     </section>
   );
 }
 
-function HomeLayout() {
+function WhoWeServePage() {
   return (
-    <>
-      <Hero />
-      <Stats />
-      <HomeAboutSection />
-      <FeaturesSection />
-      <HowItWorksSection />
+    <section className="section page-section">
       <WhoWeServeSection />
-      <ContactSection />
-    </>
+    </section>
   );
 }
+
+function LoginPage() {
+  return (
+    <div className="login-page">
+      <div className="login-container">
+        <div className="login-intro">
+          <div className="login-brand">
+            <div className="login-fingerprint">
+              <span />
+              <span />
+              <span />
+              <span />
+            </div>
+            <div>
+              <strong>SEIS</strong>
+              <small>
+                SMART ELECTORAL
+                <br />
+                INTEGRITY SYSTEM
+              </small>
+            </div>
+          </div>
+
+          <span className="eyebrow">SEIS ACCESS</span>
+          <h1>
+            Secure <span>Portal</span> Access
+          </h1>
+          <p>
+            Access the SEIS demonstration platform to view system features and
+            verification workflows.
+          </p>
+
+          <div className="login-points">
+            <div>
+              <FiCheck />
+              <span>Multi-Factor Authentication</span>
+            </div>
+            <div>
+              <FiCheck />
+              <span>Encrypted Credentials</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="login-card">
+          <div className="login-heading">
+            <span className="eyebrow">SEIS ACCESS</span>
+            <h2>Login</h2>
+            <p>Access the SEIS demonstration platform.</p>
+          </div>
+
+          <form className="login-form" onSubmit={(e) => e.preventDefault()}>
+            <div className="form-group">
+              <label htmlFor="email">Email Address</label>
+              <div className="input-wrapper">
+                <FiMail />
+                <input
+                  type="email"
+                  id="email"
+                  placeholder="Enter your email"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="password">Password</label>
+              <div className="input-wrapper">
+                <FiKey />
+                <input
+                  type="password"
+                  id="password"
+                  placeholder="Enter your password"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="login-options">
+              <label className="remember">
+                <input type="checkbox" />
+                <span>Remember me</span>
+              </label>
+
+              <button type="button" className="forgot-password">
+                Forgot password?
+              </button>
+            </div>
+
+            <button type="submit" className="green-btn login-submit">
+              Login
+              <FiArrowRight />
+            </button>
+          </form>
+
+          <div className="login-security">
+            <FiShield />
+            <span>256-bit SSL Encrypted Connection</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* =========================
+   FOOTER
+========================= */
 
 function Footer() {
   return (
     <footer className="footer section-dark">
-      <p>&copy; {new Date().getFullYear()} SEIS. All rights reserved.</p>
+      <p>© {new Date().getFullYear()} SEIS. All rights reserved.</p>
     </footer>
   );
 }
+
+/* =========================
+   APP ROUTER
+========================= */
 
 export default function App() {
   return (
     <Router>
       <div className="app-container">
         <Navbar />
+
         <main className="main-content">
           <Routes>
             <Route path="/" element={<HomeLayout />} />
@@ -525,6 +567,7 @@ export default function App() {
             <Route path="/login" element={<LoginPage />} />
           </Routes>
         </main>
+
         <Footer />
       </div>
     </Router>
