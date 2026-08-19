@@ -1,3 +1,11 @@
+import React, { useState } from "react";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  NavLink,
+  Link,
+} from "react-router-dom";
 import {
   FiArrowRight,
   FiBarChart2,
@@ -6,7 +14,6 @@ import {
   FiLock,
   FiMail,
   FiMapPin,
-  FiPhone,
   FiPieChart,
   FiSearch,
   FiShield,
@@ -15,21 +22,17 @@ import {
   FiMenu,
   FiX,
   FiKey,
+  FiGlobe,
+  FiGithub,
+  FiTwitter,
+  FiLinkedin,
 } from "react-icons/fi";
-
-import { useState } from "react";
-
-import {
-  BrowserRouter as Router,
-  Routes,
-  Route,
-  NavLink,
-  Link,
-} from "react-router-dom";
 
 import AboutPage from "./pages/About/About";
 import FeaturesPage from "./pages/Features/Features";
 import ContactPage from "./pages/Contact/Contact";
+import DashboardLayout from "./components/dashboard/DashboardLayout";
+import DashboardOverview from "./components/dashboard/DashboardOverview";
 
 import "./App.css";
 
@@ -58,7 +61,6 @@ function Logo() {
 
       <div>
         <strong>SEIS</strong>
-
         <small>
           SMART ELECTORAL
           <br />
@@ -95,7 +97,7 @@ function Navbar() {
           Login
         </Link>
 
-        <Link to="/contact" className="green-btn small">
+        <Link to="/dashboard" className="green-btn small">
           Get Started
         </Link>
       </div>
@@ -112,7 +114,7 @@ function Navbar() {
 }
 
 /* =========================
-   DASHBOARD MOCKUP
+   DASHBOARD MOCKUP (HERO PREVIEW)
 ========================= */
 
 function DashboardMockup() {
@@ -181,7 +183,7 @@ function DashboardMockup() {
 }
 
 /* =========================
-   HOME CONTENT ONLY
+   HOME CONTENT LAYOUT
 ========================= */
 
 function Hero() {
@@ -202,7 +204,7 @@ function Hero() {
         </p>
 
         <div className="hero-buttons">
-          <Link to="/contact" className="green-btn">
+          <Link to="/dashboard" className="green-btn">
             Get Started
             <FiArrowRight />
           </Link>
@@ -252,6 +254,8 @@ function HomeLayout() {
     <>
       <Hero />
       <Stats />
+      <HowItWorksSection />
+      <WhoWeServeSection />
     </>
   );
 }
@@ -260,93 +264,51 @@ function HomeLayout() {
    SECTIONS FOR OTHER ROUTES
 ========================= */
 
-function FeaturesSection() {
-  const features = [
-    {
-      icon: FiShield,
-      title: "Secure Authentication",
-      text: "Protect voter and election-official access through secure authentication and authorization.",
-    },
-    {
-      icon: FiLock,
-      title: "Data Protection",
-      text: "Protect sensitive election information through secure digital communication and controlled access.",
-    },
-    {
-      icon: FiCheck,
-      title: "Vote Verification",
-      text: "Support verification workflows that help confirm the integrity of election information.",
-    },
-    {
-      icon: FiFileText,
-      title: "Audit Trail",
-      text: "Maintain a traceable record of important election activities for accountability.",
-    },
-    {
-      icon: FiBarChart2,
-      title: "Results Monitoring",
-      text: "Give authorized officials a clear overview of election statistics and results.",
-    },
-    {
-      icon: FiSearch,
-      title: "Transparency",
-      text: "Make important election processes easier to monitor, understand and verify.",
-    },
-  ];
-
-  return (
-    <section className="section features-section">
-      <div className="section-heading">
-        <span className="eyebrow">KEY FEATURES</span>
-        <h2>Designed for Election Integrity</h2>
-        <p>
-          SEIS brings together security, transparency and verification to
-          demonstrate trustworthy digital elections.
-        </p>
-      </div>
-
-      <div className="features-grid">
-        {features.map(({ icon: Icon, title, text }) => (
-          <div className="feature-card" key={title}>
-            <div className="feature-icon">
-              <Icon />
-            </div>
-            <h3>{title}</h3>
-            <p>{text}</p>
-            <Link to="/features">
-              Learn More
-              <FiArrowRight />
-            </Link>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
 function HowItWorksSection() {
   const steps = [
-    ["01", "Register", "Eligible voters are securely registered within the election system."],
-    ["02", "Authenticate", "The system verifies the identity and authorization of the user."],
-    ["03", "Cast Vote", "An authorized voter securely participates in the voting process."],
-    ["04", "Verify", "Election information passes through verification and integrity checks."],
+    {
+      number: "01",
+      title: "Register",
+      text: "Eligible voters are securely registered within the election system.",
+      icon: FiUserCheck,
+    },
+    {
+      number: "02",
+      title: "Authenticate",
+      text: "The system verifies the identity and authorization of the user.",
+      icon: FiLock,
+    },
+    {
+      number: "03",
+      title: "Cast Vote",
+      text: "An authorized voter securely participates in the voting process.",
+      icon: FiCheck,
+    },
+    {
+      number: "04",
+      title: "Verify",
+      text: "Election information passes through verification and integrity checks.",
+      icon: FiShield,
+    },
   ];
 
   return (
-    <section className="section how-section">
+    <section className="section how-it-works-section">
       <div className="section-heading">
         <span className="eyebrow">HOW IT WORKS</span>
-        <h2>A Transparent Election Process</h2>
-        <p>
-          SEIS demonstrates a structured workflow designed to support secure,
-          transparent and verifiable digital elections.
-        </p>
+        <h2>Transparent & Verifiable Process</h2>
+        <p>Four simple steps to ensure complete electoral integrity.</p>
       </div>
 
-      <div className="steps">
-        {steps.map(([number, title, text]) => (
-          <div className="step" key={number}>
-            <div className="step-number">{number}</div>
+      <div className="steps-grid">
+        {steps.map(({ number, title, text, icon: Icon }) => (
+          <div className="step-card" key={number}>
+            <div className="step-header">
+              <span className="step-number">{number}</span>
+              <div className="step-icon">
+                <Icon />
+              </div>
+            </div>
             <h3>{title}</h3>
             <p>{text}</p>
           </div>
@@ -357,54 +319,91 @@ function HowItWorksSection() {
 }
 
 function WhoWeServeSection() {
-  const groups = [
-    {
-      icon: FiUsers,
-      title: "Voters",
-      text: "Provide voters with a clear and trustworthy digital election experience.",
-    },
-    {
-      icon: FiUserCheck,
-      title: "Election Officials",
-      text: "Give authorized officials tools for monitoring election activities.",
-    },
-    {
-      icon: FiSearch,
-      title: "Observers",
-      text: "Support election observation through accessible and verifiable information.",
-    },
-    {
-      icon: FiBarChart2,
-      title: "Election Administrators",
-      text: "Support administrators with structured election management information.",
-    },
-  ];
-
   return (
-    <section className="section serve-section">
-      <div className="section-heading">
+    <section className="serve-section" id="who-we-serve">
+      <div className="serve-header">
         <span className="eyebrow">WHO WE SERVE</span>
-        <h2>Built for Election Stakeholders</h2>
+        <h2>
+          Built for Everyone in the <span>Electoral Ecosystem</span>
+        </h2>
         <p>
-          SEIS is designed as a demonstration platform for participants in the
-          election ecosystem.
+          SEIS connects the people and institutions that make elections
+          transparent, secure and trustworthy.
         </p>
       </div>
 
       <div className="serve-grid">
-        {groups.map(({ icon: Icon, title, text }) => (
-          <div className="serve-card" key={title}>
-            <div className="serve-icon">
-              <Icon />
-            </div>
-            <h3>{title}</h3>
-            <p>{text}</p>
-            <Link to="/who-we-serve">
-              Learn More
-              <FiArrowRight />
-            </Link>
+        <div className="serve-card">
+          <div className="serve-icon">
+            <FiUsers />
           </div>
-        ))}
+          <h3>Voters</h3>
+          <p>
+            Empowering citizens with secure and transparent access to electoral
+            information.
+          </p>
+          <a href="#voters">Learn More &rarr;</a>
+        </div>
+
+        <div className="serve-card featured">
+          <div className="serve-icon">
+            <FiUserCheck />
+          </div>
+          <h3>Election Officials</h3>
+          <p>
+            Providing election administrators with reliable tools for managing
+            secure electoral processes.
+          </p>
+          <a href="#officials">Learn More &rarr;</a>
+        </div>
+
+        <div className="serve-card">
+          <div className="serve-icon">
+            <FiShield />
+          </div>
+          <h3>Candidates</h3>
+          <p>
+            Creating a transparent environment where candidates can participate
+            with confidence.
+          </p>
+          <a href="#candidates">Learn More &rarr;</a>
+        </div>
+
+        <div className="serve-card">
+          <div className="serve-icon">
+            <FiSearch />
+          </div>
+          <h3>Election Observers</h3>
+          <p>
+            Supporting independent observation and verification throughout the
+            electoral process.
+          </p>
+          <a href="#observers">Learn More &rarr;</a>
+        </div>
+
+        <div className="serve-card">
+          <div className="serve-icon">
+            <FiCheck />
+          </div>
+          <h3>Political Parties</h3>
+          <p>
+            Helping political parties engage in a fair, transparent and
+            accountable electoral system.
+          </p>
+          <a href="#parties">Learn More &rarr;</a>
+        </div>
+
+        <div className="serve-card">
+          <div className="serve-icon">
+            <FiFileText />
+          </div>
+          <h3>Civil Society</h3>
+          <p>
+            Giving civil society organizations access to trustworthy electoral
+            information and insights.
+          </p>
+          <a href="#society">Learn More &rarr;</a>
+        </div>
       </div>
     </section>
   );
@@ -535,14 +534,93 @@ function LoginPage() {
 }
 
 /* =========================
-   FOOTER
+   PROFESSIONAL FOOTER
 ========================= */
 
 function Footer() {
   return (
     <footer className="footer section-dark">
-      <p>© {new Date().getFullYear()} SEIS. All rights reserved.</p>
+      <div className="footer-container">
+        <div className="footer-brand">
+          <Logo />
+          <p className="footer-desc">
+            Empowering modern democracies with cryptographically verifiable,
+            transparent, and resilient electoral infrastructure.
+          </p>
+          <div className="social-links">
+            <a href="#github" aria-label="Github"><FiGithub /></a>
+            <a href="#twitter" aria-label="Twitter"><FiTwitter /></a>
+            <a href="#linkedin" aria-label="LinkedIn"><FiLinkedin /></a>
+            <a href="#global" aria-label="Website"><FiGlobe /></a>
+          </div>
+        </div>
+
+        <div className="footer-nav">
+          <div className="footer-col">
+            <h4>Platform</h4>
+            <ul className="footer-list">
+              <li><Link to="/features">Cryptographic Audit</Link></li>
+              <li><Link to="/features">Biometric Auth</Link></li>
+              <li><Link to="/how-it-works">Live Tallying</Link></li>
+              <li><Link to="/features">Public Ledger</Link></li>
+            </ul>
+          </div>
+
+          <div className="footer-col">
+            <h4>Stakeholders</h4>
+            <ul className="footer-list">
+              <li><Link to="/who-we-serve">Electoral Commissions</Link></li>
+              <li><Link to="/who-we-serve">Registered Voters</Link></li>
+              <li><Link to="/who-we-serve">International Observers</Link></li>
+              <li><Link to="/who-we-serve">Political Parties</Link></li>
+            </ul>
+          </div>
+
+          <div className="footer-col">
+            <h4>Company</h4>
+            <ul className="footer-list">
+              <li><Link to="/about">About SEIS</Link></li>
+              <li><Link to="/contact">System Security</Link></li>
+              <li><Link to="/contact">Documentation</Link></li>
+              <li><Link to="/contact">Contact Support</Link></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div className="footer-bottom">
+        <p>© {new Date().getFullYear()} SEIS Platform. All rights reserved.</p>
+        <div className="legal-links">
+          <a href="#privacy">Privacy Policy</a>
+          <a href="#terms">Terms of Service</a>
+          <a href="#security">Security Specs</a>
+        </div>
+      </div>
     </footer>
+  );
+}
+
+/* =========================
+   PUBLIC LAYOUT WRAPPER
+========================= */
+
+function PublicLayout() {
+  return (
+    <div className="app-container">
+      <Navbar />
+      <main className="main-content">
+        <Routes>
+          <Route path="/" element={<HomeLayout />} />
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/features" element={<FeaturesPage />} />
+          <Route path="/how-it-works" element={<HowItWorksPage />} />
+          <Route path="/who-we-serve" element={<WhoWeServePage />} />
+          <Route path="/contact" element={<ContactPage />} />
+          <Route path="/login" element={<LoginPage />} />
+        </Routes>
+      </main>
+      <Footer />
+    </div>
   );
 }
 
@@ -553,23 +631,15 @@ function Footer() {
 export default function App() {
   return (
     <Router>
-      <div className="app-container">
-        <Navbar />
+      <Routes>
+        {/* Nested Full Dashboard Route */}
+        <Route path="/dashboard" element={<DashboardLayout />}>
+          <Route index element={<DashboardOverview />} />
+        </Route>
 
-        <main className="main-content">
-          <Routes>
-            <Route path="/" element={<HomeLayout />} />
-            <Route path="/about" element={<AboutPage />} />
-            <Route path="/features" element={<FeaturesPage />} />
-            <Route path="/how-it-works" element={<HowItWorksPage />} />
-            <Route path="/who-we-serve" element={<WhoWeServePage />} />
-            <Route path="/contact" element={<ContactPage />} />
-            <Route path="/login" element={<LoginPage />} />
-          </Routes>
-        </main>
-
-        <Footer />
-      </div>
+        {/* Public Marketing/Website Pages */}
+        <Route path="/*" element={<PublicLayout />} />
+      </Routes>
     </Router>
   );
 }

@@ -6,103 +6,193 @@ import {
 } from "react-icons/fi";
 
 import "../../App.css";
+import "./Contact.css";
 
 export default function ContactPage() {
   return (
-    <div className="inner-page">
+    <div className="contact-page">
 
-      <section className="page-hero">
-        <div className="page-hero-content">
-
-          <span className="eyebrow">
+      {/* HERO */}
+      <section className="contact-hero">
+        <div className="contact-hero-content">
+          <span className="contact-eyebrow">
             CONTACT SEIS
           </span>
 
           <h1>
             Have Questions
             <br />
-            About SEIS?
+            <span>About SEIS?</span>
           </h1>
 
           <p>
-            Get in touch to learn more about the Smart
-            Electoral Integrity System demonstration
-            platform.
+            Get in touch to learn more about the Smart Electoral
+            Integrity System demonstration platform.
           </p>
-
         </div>
       </section>
 
-      <section className="section contact-section">
+      {/* CONTACT CONTENT */}
+      <section className="contact-section">
 
+        {/* LEFT SIDE */}
         <div className="contact-details">
 
-          <span className="eyebrow">
+          <span className="contact-eyebrow">
             GET IN TOUCH
           </span>
 
-          <h2>
-            Let's Talk
-          </h2>
+          <h2>Let's Talk</h2>
 
-          <p>
-            Learn more about our demonstration platform
-            and how it showcases secure, transparent and
-            verifiable election processes.
+          <p className="contact-description">
+            Learn more about our demonstration platform and how
+            it showcases secure, transparent and verifiable
+            election processes.
           </p>
 
-          <p>
-            <FiMail />
-            otienomodesta505@gmail.com
-          </p>
+          <div className="contact-info">
 
-          <p>
-            <FiPhone />
-            +254 727822752
-          </p>
+            <div className="contact-info-item">
+              <div className="contact-icon">
+                <FiMail />
+              </div>
 
-          <p>
-            <FiMapPin />
-            Kenya
-          </p>
+              <div>
+                <span>Email</span>
+                <p>otienomodesta505@gmail.com</p>
+              </div>
+            </div>
+
+            <div className="contact-info-item">
+              <div className="contact-icon">
+                <FiPhone />
+              </div>
+
+              <div>
+                <span>Phone</span>
+                <p>+254 727 822 752</p>
+              </div>
+            </div>
+
+            <div className="contact-info-item">
+              <div className="contact-icon">
+                <FiMapPin />
+              </div>
+
+              <div>
+                <span>Location</span>
+                <p>Kenya</p>
+              </div>
+            </div>
+
+          </div>
 
         </div>
 
-        <form
-          className="contact-form"
-          onSubmit={(e) => e.preventDefault()}
-        >
+        {/* RIGHT SIDE - FORM */}
+        <div className="contact-form-wrapper">
 
-          <input
-            type="text"
-            placeholder="Your Name"
-          />
+          <div className="contact-form-heading">
+            <h3>Send us a message</h3>
 
-          <input
-            type="email"
-            placeholder="Your Email"
-          />
+            <p>
+              Have a question or want to learn more about SEIS?
+              Send us a message.
+            </p>
+          </div>
 
-          <input
-            type="text"
-            placeholder="Subject"
-          />
-
-          <textarea
-            rows="6"
-            placeholder="Your Message"
-          />
-
-          <button
-            type="submit"
-            className="green-btn"
+          <form
+            className="contact-form"
+            onSubmit={(e) => e.preventDefault()}
           >
-            Send Message
-            <FiArrowRight />
-          </button>
 
-        </form>
+            <div className="form-row">
 
+              <div className="form-group">
+                <label htmlFor="name">
+                  Your Name
+                </label>
+
+                <input
+                  id="name"
+                  type="text"
+                  placeholder="Enter your name"
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="email">
+                  Email Address
+                </label>
+
+                <input
+                  id="email"
+                  type="email"
+                  placeholder="Enter your email"
+                  required
+                />
+              </div>
+
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="subject">
+                Subject
+              </label>
+
+              <input
+                id="subject"
+                type="text"
+                placeholder="What would you like to ask?"
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="message">
+                Message
+              </label>
+
+              <textarea
+                id="message"
+                rows="6"
+                placeholder="Write your message here..."
+                required
+              />
+            </div>
+
+            <button
+              type="submit"
+              className="contact-submit"
+            >
+              Send Message
+              <FiArrowRight />
+            </button>
+
+          </form>
+
+        </div>
+
+      </section>
+
+      {/* CTA */}
+      <section className="contact-cta">
+        <div>
+          <span className="contact-eyebrow">
+            SMART ELECTORAL INTEGRITY SYSTEM
+          </span>
+
+          <h2>
+            Building trust through
+            <span> transparency.</span>
+          </h2>
+
+          <p>
+            Explore how SEIS demonstrates secure, transparent
+            and verifiable digital election processes.
+          </p>
+        </div>
       </section>
 
     </div>
