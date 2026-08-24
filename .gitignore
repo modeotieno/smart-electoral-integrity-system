@@ -1,0 +1,22 @@
+# Node
+node_modules/
+frontend/dist/
+frontend/node_modules/
+backend/node_modules/
+
+# Go binary
+/tmp/seis
+seis
+backend/seis
+
+# Env
+.env
+.env.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/

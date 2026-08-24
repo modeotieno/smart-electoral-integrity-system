@@ -13,8 +13,8 @@ const menuItems = [
 
 export default function DashboardLayout() {
   return (
-    <div className="dashboard">
-      <aside className="dash-sidebar">
+    <div className="dash-portal">
+      <aside className="dash-portal-sidebar">
         <div className="dash-logo">
           <span className="mini-fingerprint" />
           SEIS
@@ -42,7 +42,7 @@ export default function DashboardLayout() {
         </div>
       </aside>
 
-      <div className="dash-content-wrap">
+      <div className="dash-portal-content">
         <Outlet />
       </div>
     </div>

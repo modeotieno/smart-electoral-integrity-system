@@ -33,6 +33,7 @@ import FeaturesPage from "./pages/Features/Features";
 import ContactPage from "./pages/Contact/Contact";
 import DashboardLayout from "./components/dashboard/DashboardLayout";
 import DashboardOverview from "./components/dashboard/DashboardOverview";
+import Placeholder from "./components/dashboard/Placeholder";
 
 // UPDATED: Included .jsx extension to satisfy Vite import resolution
 import GetStarted from "./pages/GetStarted/GetStarted.jsx";
@@ -643,6 +644,11 @@ export default function App() {
         {/* Nested Full Dashboard Route */}
         <Route path="/dashboard" element={<DashboardLayout />}>
           <Route index element={<DashboardOverview />} />
+          <Route path="voters" element={<Placeholder title="Voters" />} />
+          <Route path="candidates" element={<Placeholder title="Candidates" />} />
+          <Route path="stations" element={<Placeholder title="Polling Stations" />} />
+          <Route path="results" element={<Placeholder title="Results" />} />
+          <Route path="reports" element={<Placeholder title="Reports" />} />
         </Route>
 
         {/* Public Marketing/Website Pages */}

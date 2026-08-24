@@ -2,22 +2,36 @@ package database
 
 import (
 	"context"
+	"os"
 
-	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func Connect() (*pgx.Conn, error) {
-	dsn := "postgres://seis_user:seis_password@localhost:5432/seis_db"
+func dsnFromEnv() string {
+	if v := os.Getenv("DATABASE_URL"); v != "" {
+		return v
+	}
+	return "postgres://seis_user:seis_password@localhost:5432/seis_db?sslmode=disable"
+}
 
-	conn, err := pgx.Connect(context.Background(), dsn)
+// Connect returns a *pgxpool.Pool suitable for concurrent use.
+// It reads DATABASE_URL env var with fallback to docker-compose defaults.
+func Connect() (*pgxpool.Pool, error) {
+	dsn := dsnFromEnv()
+	cfg, err := pgxpool.ParseConfig(dsn)
 	if err != nil {
 		return nil, err
 	}
+	cfg.MaxConns = 10
+	cfg.MinConns = 1
 
-	if err := conn.Ping(context.Background()); err != nil {
-		conn.Close(context.Background())
+	pool, err := pgxpool.NewWithConfig(context.Background(), cfg)
+	if err != nil {
 		return nil, err
 	}
-
-	return conn, nil
+	if err := pool.Ping(context.Background()); err != nil {
+		pool.Close()
+		return nil, err
+	}
+	return pool, nil
 }

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"net/http"
+	"os"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -11,18 +12,26 @@ import (
 )
 
 func main() {
-	db, err := database.Connect()
+	pool, err := database.Connect()
 	if err != nil {
-		panic("Database connection failed: " + err.Error())
+		// Allow backend to start without DB for healthcheck/dev; log instead of panic
+		// Change to panic in production if DB is mandatory
+		gin.DefaultWriter.Write([]byte("WARNING: Database connection failed: " + err.Error() + "\n"))
+	} else {
+		defer pool.Close()
+		// Verify pool still alive via context
+		_ = pool.Ping(context.Background())
 	}
-
-	defer db.Close(context.Background())
 
 	router := gin.Default()
 
 	// Enable CORS for your React app
+	allowedOrigins := []string{"http://localhost:5173", "http://localhost:3000"}
+	if v := os.Getenv("CORS_ORIGINS"); v != "" {
+		allowedOrigins = []string{v}
+	}
 	router.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:5173", "http://localhost:3000"}, // Common React dev ports
+		AllowOrigins:     allowedOrigins,
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
@@ -30,12 +39,22 @@ func main() {
 	}))
 
 	router.GET("/api/health", func(c *gin.Context) {
+		dbStatus := "disconnected"
+		if pool != nil {
+			if err := pool.Ping(c.Request.Context()); err == nil {
+				dbStatus = "connected"
+			}
+		}
 		c.JSON(http.StatusOK, gin.H{
 			"status":   "ok",
 			"message":  "SEIS backend is running",
-			"database": "connected",
+			"database": dbStatus,
 		})
 	})
 
-	router.Run(":8080")
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+	router.Run(":" + port)
 }
