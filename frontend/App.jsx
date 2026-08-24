@@ -26,6 +26,8 @@ import {
   useNavigate,
 } from "react-router-dom";
 
+import { GetStarted } from "./pages/GetStarted/GetStarted.jsx";
+
 import "./App.css";
 
 /* =========================
@@ -136,7 +138,7 @@ function Navbar() {
         <button
           type="button"
           className="green-btn small"
-          onClick={() => handleNavigation("/contact")}
+          onClick={() => handleNavigation("/signup")}
         >
           Get Started
         </button>
@@ -283,7 +285,7 @@ function Hero() {
           <button
             type="button"
             className="green-btn"
-            onClick={() => navigate("/contact")}
+            onClick={() => navigate("/signup")}
           >
             Get Started
             <FiArrowRight />
@@ -1308,6 +1310,11 @@ export default function App() {
             <Route
               path="/login"
               element={<LoginPage />}
+            />
+
+            <Route
+              path="/signup"
+              element={<GetStarted />}
             />
 
           </Routes>

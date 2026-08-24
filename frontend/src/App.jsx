@@ -34,6 +34,9 @@ import ContactPage from "./pages/Contact/Contact";
 import DashboardLayout from "./components/dashboard/DashboardLayout";
 import DashboardOverview from "./components/dashboard/DashboardOverview";
 
+// UPDATED: Included .jsx extension to satisfy Vite import resolution
+import GetStarted from "./pages/GetStarted/GetStarted.jsx";
+
 import "./App.css";
 
 const navItems = [
@@ -97,7 +100,8 @@ function Navbar() {
           Login
         </Link>
 
-        <Link to="/dashboard" className="green-btn small">
+        {/* Route to Get Started */}
+        <Link to="/signup" className="green-btn small">
           Get Started
         </Link>
       </div>
@@ -204,7 +208,8 @@ function Hero() {
         </p>
 
         <div className="hero-buttons">
-          <Link to="/dashboard" className="green-btn">
+          {/* Route to Get Started */}
+          <Link to="/signup" className="green-btn">
             Get Started
             <FiArrowRight />
           </Link>
@@ -534,7 +539,7 @@ function LoginPage() {
 }
 
 /* =========================
-   PROFESSIONAL FOOTER
+   FOOTER
 ========================= */
 
 function Footer() {
@@ -617,6 +622,9 @@ function PublicLayout() {
           <Route path="/who-we-serve" element={<WhoWeServePage />} />
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/login" element={<LoginPage />} />
+          
+          {/* GET STARTED ROUTE */}
+          <Route path="/signup" element={<GetStarted />} />
         </Routes>
       </main>
       <Footer />
