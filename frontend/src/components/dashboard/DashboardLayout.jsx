@@ -1,6 +1,7 @@
 import React from "react";
-import { Link, NavLink, Outlet } from "react-router-dom";
+import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { FiBarChart2, FiLogOut } from "react-icons/fi";
+import { logout } from "../../api/api";
 
 const menuItems = [
   { name: "Dashboard", path: "/dashboard" },
@@ -12,6 +13,11 @@ const menuItems = [
 ];
 
 export default function DashboardLayout() {
+  const navigate = useNavigate();
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
   return (
     <div className="dash-portal">
       <aside className="dash-portal-sidebar">
@@ -35,10 +41,10 @@ export default function DashboardLayout() {
         ))}
 
         <div style={{ marginTop: "auto", paddingTop: "1rem" }}>
-          <Link to="/login" className="dash-menu logout">
+          <button type="button" onClick={handleLogout} className="dash-menu logout" style={{ width: "100%", background: "transparent", border: "none", textAlign: "left", cursor: "pointer", color: "inherit" }}>
             <FiLogOut />
             Logout
-          </Link>
+          </button>
         </div>
       </aside>
 

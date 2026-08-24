@@ -31,9 +31,11 @@ import {
 import AboutPage from "./pages/About/About";
 import FeaturesPage from "./pages/Features/Features";
 import ContactPage from "./pages/Contact/Contact";
+import RegisterPage from "./pages/Register/Register";
 import DashboardLayout from "./components/dashboard/DashboardLayout";
 import DashboardOverview from "./components/dashboard/DashboardOverview";
 import Placeholder from "./components/dashboard/Placeholder";
+import { login, getToken } from "./api/api";
 
 // UPDATED: Included .jsx extension to satisfy Vite import resolution
 import GetStarted from "./pages/GetStarted/GetStarted.jsx";
@@ -101,8 +103,7 @@ function Navbar() {
           Login
         </Link>
 
-        {/* Route to Get Started */}
-        <Link to="/signup" className="green-btn small">
+<Link to="/signup" className="green-btn small">
           Get Started
         </Link>
       </div>
@@ -209,8 +210,7 @@ function Hero() {
         </p>
 
         <div className="hero-buttons">
-          {/* Route to Get Started */}
-          <Link to="/signup" className="green-btn">
+<Link to="/signup" className="green-btn">
             Get Started
             <FiArrowRight />
           </Link>
@@ -436,6 +436,25 @@ function WhoWeServePage() {
 }
 
 function LoginPage() {
+  const [form, setForm] = useState({ email: "", password: "" });
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+
+  const onSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    try {
+      await login({ email: form.email.trim(), password: form.password });
+      navigate("/dashboard");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="login-page">
       <div className="login-container">
@@ -485,7 +504,13 @@ function LoginPage() {
             <p>Access the SEIS demonstration platform.</p>
           </div>
 
-          <form className="login-form" onSubmit={(e) => e.preventDefault()}>
+          {error && (
+            <div style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626", padding: "10px 12px", borderRadius: 8, fontSize: "0.85rem", marginBottom: 12 }}>
+              {error}
+            </div>
+          )}
+
+          <form className="login-form" onSubmit={onSubmit}>
             <div className="form-group">
               <label htmlFor="email">Email Address</label>
               <div className="input-wrapper">
@@ -494,6 +519,8 @@ function LoginPage() {
                   type="email"
                   id="email"
                   placeholder="Enter your email"
+                  value={form.email}
+                  onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
                   required
                 />
               </div>
@@ -507,6 +534,8 @@ function LoginPage() {
                   type="password"
                   id="password"
                   placeholder="Enter your password"
+                  value={form.password}
+                  onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))}
                   required
                 />
               </div>
@@ -523,11 +552,15 @@ function LoginPage() {
               </button>
             </div>
 
-            <button type="submit" className="green-btn login-submit">
-              Login
+            <button type="submit" className="green-btn login-submit" disabled={loading}>
+              {loading ? "Signing in..." : "Login"}
               <FiArrowRight />
             </button>
           </form>
+
+          <p style={{ textAlign: "center", marginTop: 18, fontSize: "0.85rem", color: "var(--slate-500)" }}>
+            No account? <Link to="/register" style={{ color: "var(--green-600)", fontWeight: 700 }}>Create account</Link>
+          </p>
 
           <div className="login-security">
             <FiShield />
@@ -623,14 +656,32 @@ function PublicLayout() {
           <Route path="/who-we-serve" element={<WhoWeServePage />} />
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/login" element={<LoginPage />} />
-          
-          {/* GET STARTED ROUTE */}
-          <Route path="/signup" element={<GetStarted />} />
+{/* GET STARTED ROUTE */}
+<Route path="/signup" element={<GetStarted />} />
+<Route path="/register" element={<RegisterPage />} />
         </Routes>
       </main>
       <Footer />
     </div>
   );
+}
+
+function RequireAuth({ children }) {
+  if (!getToken()) {
+    return (
+      <div className="login-page" style={{ justifyContent: "center" }}>
+        <div className="login-card" style={{ maxWidth: 480, textAlign: "center" }}>
+          <h3>Authentication required</h3>
+          <p className="text-muted" style={{ marginTop: 8 }}>Please create an account or log in to access the dashboard.</p>
+          <div style={{ display: "flex", gap: 12, justifyContent: "center", marginTop: 18 }}>
+            <Link to="/register" className="green-btn">Create Account</Link>
+            <Link to="/login" className="login-btn" style={{ color: "var(--green-600)", borderColor: "var(--green-600)" }}>Login</Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  return children;
 }
 
 /* =========================
@@ -641,8 +692,15 @@ export default function App() {
   return (
     <Router>
       <Routes>
-        {/* Nested Full Dashboard Route */}
-        <Route path="/dashboard" element={<DashboardLayout />}>
+        {/* Protected Dashboard */}
+        <Route
+          path="/dashboard"
+          element={
+            <RequireAuth>
+              <DashboardLayout />
+            </RequireAuth>
+          }
+        >
           <Route index element={<DashboardOverview />} />
           <Route path="voters" element={<Placeholder title="Voters" />} />
           <Route path="candidates" element={<Placeholder title="Candidates" />} />

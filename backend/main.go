@@ -9,6 +9,8 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/modeotieno/smart-electoral-integrity-system/database"
+	"github.com/modeotieno/smart-electoral-integrity-system/handlers"
+	"github.com/modeotieno/smart-electoral-integrity-system/middleware"
 )
 
 func main() {
@@ -51,6 +53,12 @@ func main() {
 			"database": dbStatus,
 		})
 	})
+
+	// Auth routes — connects frontend Register / Login
+	authHandler := &handlers.AuthHandler{Pool: pool}
+	router.POST("/api/auth/register", authHandler.Register)
+	router.POST("/api/auth/login", authHandler.Login)
+	router.GET("/api/auth/me", middleware.RequireAuth(), authHandler.Me)
 
 	port := os.Getenv("PORT")
 	if port == "" {
