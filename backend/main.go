@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -13,16 +14,22 @@ import (
 	"github.com/modeotieno/smart-electoral-integrity-system/middleware"
 )
 
+func splitAndTrim(s, sep string) []string {
+	parts := strings.Split(s, sep)
+	for i, p := range parts {
+		parts[i] = strings.TrimSpace(p)
+	}
+	return parts
+}
+
 func main() {
-	pool, err := database.Connect()
+	pool, err := database.ConnectWithRetry()
 	if err != nil {
-		// Allow backend to start without DB for healthcheck/dev; log instead of panic
-		// Change to panic in production if DB is mandatory
-		gin.DefaultWriter.Write([]byte("WARNING: Database connection failed: " + err.Error() + "\n"))
+		gin.DefaultWriter.Write([]byte("WARNING: Database connection failed after retries: " + err.Error() + "\n"))
 	} else {
 		defer pool.Close()
-		// Verify pool still alive via context
 		_ = pool.Ping(context.Background())
+		gin.DefaultWriter.Write([]byte("INFO: Database connected successfully\n"))
 	}
 
 	router := gin.Default()
@@ -30,7 +37,13 @@ func main() {
 	// Enable CORS for your React app
 	allowedOrigins := []string{"http://localhost:5173", "http://localhost:3000"}
 	if v := os.Getenv("CORS_ORIGINS"); v != "" {
-		allowedOrigins = []string{v}
+		// support comma-separated list
+		allowedOrigins = []string{}
+		for _, o := range splitAndTrim(v, ",") {
+			if o != "" {
+				allowedOrigins = append(allowedOrigins, o)
+			}
+		}
 	}
 	router.Use(cors.New(cors.Config{
 		AllowOrigins:     allowedOrigins,
@@ -59,6 +72,20 @@ func main() {
 	router.POST("/api/auth/register", authHandler.Register)
 	router.POST("/api/auth/login", authHandler.Login)
 	router.GET("/api/auth/me", middleware.RequireAuth(), authHandler.Me)
+
+	// Biometric routes — advanced functional
+	bioHandler := &handlers.BiometricHandler{Pool: pool}
+	router.POST("/api/biometric/enroll", middleware.RequireAuth(), bioHandler.Enroll)
+	router.POST("/api/biometric/verify", bioHandler.Verify)
+	router.GET("/api/biometric/status", middleware.RequireAuth(), bioHandler.Status)
+
+	// Resource routes — elections, candidates, stations, stats
+	resHandler := &handlers.ResourceHandler{Pool: pool}
+	router.GET("/api/elections", resHandler.ListElections)
+	router.GET("/api/candidates", resHandler.ListCandidates)
+	router.GET("/api/stations", resHandler.ListStations)
+	router.GET("/api/stats", resHandler.DashboardStats)
+	router.GET("/api/audit-logs", middleware.RequireAuth(), resHandler.AuditLogs)
 
 	port := os.Getenv("PORT")
 	if port == "" {

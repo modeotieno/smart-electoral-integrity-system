@@ -5,6 +5,7 @@ import { logout } from "../../api/api";
 
 const menuItems = [
   { name: "Dashboard", path: "/dashboard" },
+  { name: "Biometric", path: "/dashboard/biometric" },
   { name: "Voters", path: "/dashboard/voters" },
   { name: "Candidates", path: "/dashboard/candidates" },
   { name: "Polling Stations", path: "/dashboard/stations" },

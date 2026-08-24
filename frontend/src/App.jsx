@@ -5,6 +5,7 @@ import {
   Route,
   NavLink,
   Link,
+  Outlet,
 } from "react-router-dom";
 import {
   FiArrowRight,
@@ -260,6 +261,15 @@ function HomeLayout() {
     <>
       <Hero />
       <Stats />
+      {/* Photo banner — inserted as requested */}
+      <section style={{ padding: "24px 7%", background: "white" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 16, maxWidth: 1200, margin: "0 auto" }}>
+          <img src="https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=600&q=80" alt="Voters queuing" style={{ width: "100%", height: 180, objectFit: "cover", borderRadius: 14, border: "1px solid var(--slate-200)" }} loading="lazy" />
+          <img src="https://images.unsplash.com/photo-1589829085413-56de8ae18c73?w=600&q=80" alt="Ballot box" style={{ width: "100%", height: 180, objectFit: "cover", borderRadius: 14, border: "1px solid var(--slate-200)" }} loading="lazy" />
+          <img src="https://images.unsplash.com/photo-1556157388-97ed244727b5?w=600&q=80" alt="Election officials" style={{ width: "100%", height: 180, objectFit: "cover", borderRadius: 14, border: "1px solid var(--slate-200)" }} loading="lazy" />
+          <img src="https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=600&q=80" alt="Observer" style={{ width: "100%", height: 180, objectFit: "cover", borderRadius: 14, border: "1px solid var(--slate-200)" }} loading="lazy" />
+        </div>
+      </section>
       <HowItWorksSection />
       <WhoWeServeSection />
     </>
@@ -271,6 +281,12 @@ function HomeLayout() {
 ========================= */
 
 function HowItWorksSection() {
+  const stepPhotos = [
+    "https://images.unsplash.com/photo-1506784983877-45594efa4cbe?w=600&q=80",
+    "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&q=80",
+    "https://images.unsplash.com/photo-1577896859042-8db0b50a54f7?w=600&q=80",
+    "https://images.unsplash.com/photo-1553877522-43269d4ea984?w=600&q=80",
+  ];
   const steps = [
     {
       number: "01",
@@ -307,8 +323,9 @@ function HowItWorksSection() {
       </div>
 
       <div className="steps-grid">
-        {steps.map(({ number, title, text, icon: Icon }) => (
+        {steps.map(({ number, title, text, icon: Icon }, idx) => (
           <div className="step-card" key={number}>
+            <img src={stepPhotos[idx]} alt={title} style={{ width: "100%", height: 120, objectFit: "cover", borderRadius: 10, marginBottom: 14, border: "1px solid var(--slate-200)" }} loading="lazy" />
             <div className="step-header">
               <span className="step-number">{number}</span>
               <div className="step-icon">
@@ -325,6 +342,14 @@ function HowItWorksSection() {
 }
 
 function WhoWeServeSection() {
+  const servePhotos = [
+    "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=600&q=80",
+    "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=600&q=80",
+    "https://images.unsplash.com/photo-1556157388-97ed244727b5?w=600&q=80",
+    "https://images.unsplash.com/photo-1577896859042-8db0b50a54f7?w=600&q=80",
+    "https://images.unsplash.com/photo-1529107386315-e1a2ed48a620?w=600&q=80",
+    "https://images.unsplash.com/photo-1541872703-74c5e44368f9?w=600&q=80",
+  ];
   return (
     <section className="serve-section" id="who-we-serve">
       <div className="serve-header">
@@ -340,6 +365,7 @@ function WhoWeServeSection() {
 
       <div className="serve-grid">
         <div className="serve-card">
+          <img src={servePhotos[0]} alt="Voters" style={{ width: "100%", height: 140, objectFit: "cover", borderRadius: 10, marginBottom: 12 }} loading="lazy" />
           <div className="serve-icon">
             <FiUsers />
           </div>
@@ -352,6 +378,7 @@ function WhoWeServeSection() {
         </div>
 
         <div className="serve-card featured">
+          <img src={servePhotos[1]} alt="Officials" style={{ width: "100%", height: 140, objectFit: "cover", borderRadius: 10, marginBottom: 12 }} loading="lazy" />
           <div className="serve-icon">
             <FiUserCheck />
           </div>
@@ -364,6 +391,7 @@ function WhoWeServeSection() {
         </div>
 
         <div className="serve-card">
+          <img src={servePhotos[2]} alt="Candidates" style={{ width: "100%", height: 140, objectFit: "cover", borderRadius: 10, marginBottom: 12 }} loading="lazy" />
           <div className="serve-icon">
             <FiShield />
           </div>
@@ -376,6 +404,7 @@ function WhoWeServeSection() {
         </div>
 
         <div className="serve-card">
+          <img src={servePhotos[3]} alt="Observers" style={{ width: "100%", height: 140, objectFit: "cover", borderRadius: 10, marginBottom: 12 }} loading="lazy" />
           <div className="serve-icon">
             <FiSearch />
           </div>
@@ -388,6 +417,7 @@ function WhoWeServeSection() {
         </div>
 
         <div className="serve-card">
+          <img src={servePhotos[4]} alt="Parties" style={{ width: "100%", height: 140, objectFit: "cover", borderRadius: 10, marginBottom: 12 }} loading="lazy" />
           <div className="serve-icon">
             <FiCheck />
           </div>
@@ -400,6 +430,7 @@ function WhoWeServeSection() {
         </div>
 
         <div className="serve-card">
+          <img src={servePhotos[5]} alt="Civil Society" style={{ width: "100%", height: 140, objectFit: "cover", borderRadius: 10, marginBottom: 12 }} loading="lazy" />
           <div className="serve-icon">
             <FiFileText />
           </div>
@@ -648,6 +679,7 @@ function PublicLayout() {
     <div className="app-container">
       <Navbar />
       <main className="main-content">
+
         <Routes>
           <Route path="/" element={<HomeLayout />} />
           <Route path="/about" element={<AboutPage />} />
@@ -660,7 +692,7 @@ function PublicLayout() {
 <Route path="/signup" element={<GetStarted />} />
 <Route path="/register" element={<RegisterPage />} />
         </Routes>
-      </main>
+
       <Footer />
     </div>
   );
@@ -707,11 +739,32 @@ export default function App() {
           <Route path="stations" element={<Placeholder title="Polling Stations" />} />
           <Route path="results" element={<Placeholder title="Results" />} />
           <Route path="reports" element={<Placeholder title="Reports" />} />
+          <Route path="biometric" element={<BiometricPageWrapper />} />
         </Route>
 
         {/* Public Marketing/Website Pages */}
-        <Route path="/*" element={<PublicLayout />} />
+        <Route element={<PublicLayout />}>
+          <Route path="/" element={<HomeLayout />} />
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/features" element={<FeaturesPage />} />
+          <Route path="/how-it-works" element={<HowItWorksPage />} />
+          <Route path="/who-we-serve" element={<WhoWeServePage />} />
+          <Route path="/contact" element={<ContactPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/biometric" element={<BiometricPageWrapper />} />
+        </Route>
       </Routes>
     </Router>
+  );
+}
+
+function BiometricPageWrapper() {
+  // lazy import to avoid circular
+  const Biometric = React.lazy(() => import("./pages/Biometric/Biometric"));
+  return (
+    <React.Suspense fallback={<div style={{ padding: 40 }}>Loading biometric...</div>}>
+      <Biometric />
+    </React.Suspense>
   );
 }

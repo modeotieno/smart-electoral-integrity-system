@@ -31,6 +31,7 @@ services:
       DATABASE_URL: postgres://seis_user:seis_password@postgres:5432/seis_db?sslmode=disable
       PORT: 8080
       CORS_ORIGINS: http://localhost:5173
+      JWT_SECRET: seis-ultra-secure-jwt-change-me
       GIN_MODE: release
     ports:
       - "8080:8080"
@@ -44,10 +45,13 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        VITE_API_URL: http://localhost:8080
     container_name: seis-frontend
     restart: unless-stopped
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     ports:
       - "5173:80"
     environment:
