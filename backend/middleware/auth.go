@@ -31,3 +31,34 @@ func RequireAuth() gin.HandlerFunc {
 		c.Next()
 	}
 }
+
+func RequireRole(roles ...string) gin.HandlerFunc {
+	allowed := make(map[string]bool, len(roles))
+	for _, r := range roles {
+		allowed[r] = true
+	}
+	return func(c *gin.Context) {
+		roleVal, exists := c.Get("role")
+		if !exists {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "role not found in token"})
+			return
+		}
+		role, _ := roleVal.(string)
+		if !allowed[role] {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "insufficient permissions for role: " + role})
+			return
+		}
+		c.Next()
+	}
+}
+
+func SecurityHeaders() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Header("X-Content-Type-Options", "nosniff")
+		c.Header("X-Frame-Options", "DENY")
+		c.Header("X-XSS-Protection", "1; mode=block")
+		c.Header("Referrer-Policy", "strict-origin-when-cross-origin")
+		c.Header("Content-Security-Policy", "default-src 'self'")
+		c.Next()
+	}
+}

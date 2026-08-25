@@ -18,13 +18,15 @@ type AuthHandler struct {
 }
 
 var allowedRoles = map[string]bool{
-	"citizen":               true,
-	"voter":                 true,
-	"observer":              true,
-	"candidate":             true,
-	"presiding_officer":     true,
-	"returning_officer":     true,
+	"citizen":                true,
+	"voter":                  true,
+	"observer":               true,
+	"candidate":              true,
+	"presiding_officer":      true,
+	"returning_officer":      true,
 	"election_administrator": true,
+	"system_administrator":   true,
+	"admin":                  true,
 }
 
 func normalizeRole(r string) string {
@@ -44,7 +46,7 @@ func normalizeRole(r string) string {
 		return "presiding_officer"
 	case "returning officer":
 		return "returning_officer"
-	case "election administrator", "admin":
+	case "election administrator", "admin", "system administrator", "system_administrator":
 		return "election_administrator"
 	}
 	if allowedRoles[r] {

@@ -116,13 +116,6 @@ export default function Biometric() {
         <h1 style={{ fontSize: "clamp(2rem,4vw,2.8rem)", color: "var(--navy-900)", margin: "8px 0 10px" }}>Biometric Identity — Fully Functional</h1>
         <p style={{ color: "var(--slate-500)", maxWidth: 700 }}>SEIS now supports real biometric enrollment: fingerprint, face and iris. Data is hashed with SHA-256 and never stored raw. Capture via camera or upload, enroll securely, and verify instantly.</p>
 
-        {/* Demo photos - inserted as requested */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 16, margin: "28px 0" }}>
-          <img src="https://images.unsplash.com/photo-1586953208448-b95a79798f07?w=600&q=80" alt="Fingerprint scan" style={{ width: "100%", height: 180, objectFit: "cover", borderRadius: 14, border: "1px solid var(--slate-200)" }} />
-          <img src="https://images.unsplash.com/photo-1557804506-669a67965ba0?w=600&q=80" alt="Face recognition" style={{ width: "100%", height: 180, objectFit: "cover", borderRadius: 14, border: "1px solid var(--slate-200)" }} />
-          <img src="https://images.unsplash.com/photo-1526379095098-d400fd0bf935?w=600&q=80" alt="Secure voting" style={{ width: "100%", height: 180, objectFit: "cover", borderRadius: 14, border: "1px solid var(--slate-200)" }} />
-        </div>
-
         {/* Status card */}
         {token && status && (
           <div className="dash-card" style={{ marginBottom: 18 }}>
@@ -183,7 +176,6 @@ export default function Biometric() {
                 <li>Verification hashes again & constant-time compares</li>
                 <li>Audit logged to <code>audit_logs</code></li>
               </ol>
-              <img src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=600&q=80" alt="Election tech" style={{ width: "100%", height: 140, objectFit: "cover", borderRadius: 10, marginTop: 14 }} />
             </div>
             <div className="dash-card">
               <h4 style={{ marginBottom: 8 }}>Trust Signals</h4>

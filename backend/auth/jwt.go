@@ -12,7 +12,19 @@ func jwtSecret() []byte {
 	if v := os.Getenv("JWT_SECRET"); v != "" {
 		return []byte(v)
 	}
+	// dev fallback only; validateEnv() warns in release mode
 	return []byte("seis-dev-secret-change-in-production")
+}
+
+func MustValidateSecret() error {
+	s := os.Getenv("JWT_SECRET")
+	if s == "" {
+		return errors.New("JWT_SECRET not set")
+	}
+	if len(s) < 16 {
+		return errors.New("JWT_SECRET must be at least 16 characters")
+	}
+	return nil
 }
 
 type Claims struct {

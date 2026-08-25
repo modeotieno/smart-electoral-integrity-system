@@ -75,18 +75,18 @@ func (h *BiometricHandler) Verify(c *gin.Context) {
 	hash := hashBio(req.BiometricData)
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
-	var stored string
-	var enrolled bool
+	var stored *string
+	var enrolled *bool
 	err := h.Pool.QueryRow(ctx, `SELECT biometric_hash, biometric_enrolled FROM users WHERE email=$1`, req.Email).Scan(&stored, &enrolled)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "user not found or biometric not enrolled"})
 		return
 	}
-	if !enrolled || stored == "" {
+	if enrolled == nil || !*enrolled || stored == nil || *stored == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "biometric not enrolled for this user"})
 		return
 	}
-	if stored != hash {
+	if *stored != hash {
 		c.JSON(http.StatusUnauthorized, gin.H{"verified": false, "error": "biometric mismatch"})
 		return
 	}
@@ -102,19 +102,31 @@ func (h *BiometricHandler) Status(c *gin.Context) {
 	userID := uid.(int)
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
-	var btype, hash string
-	var enrolled bool
+	var btype, hash *string
+	var enrolled *bool
 	var enrolledAt *time.Time
 	err := h.Pool.QueryRow(ctx, `SELECT biometric_type, biometric_hash, biometric_enrolled, biometric_enrolled_at FROM users WHERE id=$1`, userID).Scan(&btype, &hash, &enrolled, &enrolledAt)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch status"})
 		return
 	}
+	btypeVal := "none"
+	if btype != nil {
+		btypeVal = *btype
+	}
+	enrolledVal := false
+	if enrolled != nil {
+		enrolledVal = *enrolled
+	}
+	hashVal := ""
+	if hash != nil {
+		hashVal = *hash
+	}
 	c.JSON(http.StatusOK, gin.H{
-		"biometric_type":     btype,
-		"enrolled":           enrolled,
-		"enrolled_at":        enrolledAt,
-		"hash_preview":       previewHash(hash),
+		"biometric_type": btypeVal,
+		"enrolled":       enrolledVal,
+		"enrolled_at":    enrolledAt,
+		"hash_preview":   previewHash(hashVal),
 	})
 }
 

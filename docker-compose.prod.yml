@@ -1,0 +1,61 @@
+# Production override — use with: docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d
+# Requires .env with strong JWT_SECRET and POSTGRES_PASSWORD.
+
+services:
+  postgres:
+    # Do NOT expose 5432 publicly in prod; remove ports mapping
+    ports: []
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-seis_db}
+      POSTGRES_USER: ${POSTGRES_USER:-seis_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    restart: unless-stopped
+    # Persist data; back up volume postgres_data regularly
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    # Run as non-root (see Dockerfile prod user)
+    read_only: true
+    tmpfs:
+      - /tmp
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-seis_user}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-seis_db}?sslmode=disable
+      PORT: 8080
+      CORS_ORIGINS: ${CORS_ORIGINS:?set CORS_ORIGINS to your frontend domain(s) e.g. https://seis.example.com}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set (32+ chars, openssl rand -base64 32)}
+      GIN_MODE: release
+    env_file:
+      - .env
+    ports:
+      - "127.0.0.1:8080:8080" # bind to localhost only; put nginx/reverse proxy in front
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/api/health | grep -q 'ok' || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:?set VITE_API_URL to public API URL e.g. https://api.seis.example.com}
+    environment:
+      VITE_API_URL: ${VITE_API_URL}
+    ports:
+      # In prod, terminate TLS at reverse proxy (Caddy/Traefik/Nginx). Frontend served on internal network.
+      - "127.0.0.1:5173:80"
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  postgres_data:

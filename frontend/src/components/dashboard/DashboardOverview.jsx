@@ -38,12 +38,7 @@ export default function DashboardOverview() {
         ))}
       </div>
 
-      {/* Photos strip */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 12, marginTop: 18 }}>
-        <img src="https://images.unsplash.com/photo-1541872703-74c5e44368f9?w=600&q=80" alt="Voting center" style={{ width: "100%", height: 140, objectFit: "cover", borderRadius: 12, border: "1px solid var(--slate-200)" }} />
-        <img src="https://images.unsplash.com/photo-1529107386315-e1a2ed48a620?w=600&q=80" alt="Ballot" style={{ width: "100%", height: 140, objectFit: "cover", borderRadius: 12, border: "1px solid var(--slate-200)" }} />
-        <img src="https://images.unsplash.com/photo-1577896859042-8db0b50a54f7?w=600&q=80" alt="Civic hall" style={{ width: "100%", height: 140, objectFit: "cover", borderRadius: 12, border: "1px solid var(--slate-200)" }} />
-      </div>
+
 
       <div className="dash-content-grid" style={{ marginTop: 18 }}>
         <div className="dash-card">
@@ -57,7 +52,6 @@ export default function DashboardOverview() {
               <span style={{ width: 36, height: 36, borderRadius: 999, background: "#e0f2fe", display: "flex", alignItems: "center", justifyContent: "center", color: "#0284c7" }}><FiBarChart2 /></span>
               <div><b>Results pipeline</b><p className="text-muted" style={{ margin: 0 }}>Aggregating from {stats?.polling_stations ?? 3} stations</p></div>
             </div>
-            <img src="https://images.unsplash.com/photo-1553877522-43269d4ea984?w=800&q=80" alt="Dashboard analytics" style={{ width: "100%", height: 140, objectFit: "cover", borderRadius: 10, marginTop: 4, border: "1px solid var(--slate-200)" }} />
           </div>
         </div>
         <div className="dash-card">
