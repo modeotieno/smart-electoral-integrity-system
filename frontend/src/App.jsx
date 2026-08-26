@@ -655,20 +655,8 @@ function PublicLayout() {
     <div className="app-container">
       <Navbar />
       <main className="main-content">
-
-        <Routes>
-          <Route path="/" element={<HomeLayout />} />
-          <Route path="/about" element={<AboutPage />} />
-          <Route path="/features" element={<FeaturesPage />} />
-          <Route path="/how-it-works" element={<HowItWorksPage />} />
-          <Route path="/who-we-serve" element={<WhoWeServePage />} />
-          <Route path="/contact" element={<ContactPage />} />
-          <Route path="/login" element={<LoginPage />} />
-{/* GET STARTED ROUTE */}
-<Route path="/signup" element={<GetStarted />} />
-<Route path="/register" element={<RegisterPage />} />
-        </Routes>
-
+        <Outlet />
+      </main>
       <Footer />
     </div>
   );
@@ -747,6 +735,7 @@ export default function App() {
           <Route path="/who-we-serve" element={<WhoWeServePage />} />
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/signup" element={<GetStarted />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/biometric" element={<BiometricPageWrapper />} />
         </Route>

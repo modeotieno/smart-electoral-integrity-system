@@ -26,7 +26,13 @@ async function apiFetch(path, options = {}) {
   });
   // 401 → token expired/invalid → auto logout
   if (res.status === 401) {
-    const body = await res.clone().json().catch(() => ({}));
+    let body = {};
+    try {
+      const src = typeof res.clone === "function" ? res.clone() : res;
+      body = await src.json().catch(() => ({}));
+    } catch {
+      body = {};
+    }
     // only auto-logout for auth endpoints, not public ones
     if (path.includes("/auth/") || path.includes("/biometric/") || path.includes("/users") || path.includes("/audit-logs")) {
       // Don't auto-redirect during background poll; just clear
@@ -43,12 +49,23 @@ async function apiFetch(path, options = {}) {
 }
 
 async function parseJson(res) {
-  const text = await res.text();
-  try {
-    return text ? JSON.parse(text) : {};
-  } catch {
-    return { raw: text };
+  // Support both fetch mocks (json) and real responses (text) — test mocks use json()
+  if (typeof res.text === "function") {
+    const text = await res.text();
+    try {
+      return text ? JSON.parse(text) : {};
+    } catch {
+      return { raw: text };
+    }
   }
+  if (typeof res.json === "function") {
+    try {
+      return await res.json();
+    } catch {
+      return {};
+    }
+  }
+  return {};
 }
 
 export async function checkBackend() {

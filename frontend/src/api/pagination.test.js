@@ -8,20 +8,27 @@ describe("paginated api helpers", () => {
   });
 
   it("fetchElections builds pagination QS and returns envelope when paginated", async () => {
+    const payload = { elections: [{ id: 1 }], data: [{ id: 1 }], pagination: { page: 1, limit: 10, total: 1, total_pages: 1 } };
     global.fetch.mockResolvedValue({
       ok: true,
-      json: async () => ({ elections: [{ id: 1 }], data: [{ id: 1 }], pagination: { page: 1, limit: 10, total: 1, total_pages: 1 } }),
+      text: async () => JSON.stringify(payload),
+      json: async () => payload,
+      clone: () => ({ json: async () => payload }),
     });
     const data = await fetchElections({ page: 1, limit: 10, search: "test" });
-    expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining("page=1"));
-    expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining("search=test"));
+    const calledUrl = global.fetch.mock.calls[0][0];
+    expect(calledUrl).toContain("page=1");
+    expect(calledUrl).toContain("search=test");
     expect(data.pagination).toBeDefined();
   });
 
   it("fetchElections returns array when no pagination opts", async () => {
+    const payload = { elections: [{ id: 1, name: "A" }] };
     global.fetch.mockResolvedValue({
       ok: true,
-      json: async () => ({ elections: [{ id: 1, name: "A" }] }),
+      text: async () => JSON.stringify(payload),
+      json: async () => payload,
+      clone: () => ({ json: async () => payload }),
     });
     const data = await fetchElections();
     expect(Array.isArray(data)).toBe(true);
@@ -30,9 +37,12 @@ describe("paginated api helpers", () => {
 
   it("fetchUsers sends auth header", async () => {
     localStorage.setItem("seis_token", "tok123");
+    const payload = { users: [], pagination: { page: 1, limit: 10, total: 0, total_pages: 0 } };
     global.fetch.mockResolvedValue({
       ok: true,
-      json: async () => ({ users: [], pagination: { page: 1, limit: 10, total: 0, total_pages: 0 } }),
+      text: async () => JSON.stringify(payload),
+      json: async () => payload,
+      clone: () => ({ json: async () => payload }),
     });
     await fetchUsers({ page: 1, limit: 5 });
     const headers = global.fetch.mock.calls[0][1].headers;
@@ -40,9 +50,12 @@ describe("paginated api helpers", () => {
   });
 
   it("throws on error response", async () => {
+    const payload = { error: "failed" };
     global.fetch.mockResolvedValue({
       ok: false,
-      json: async () => ({ error: "failed" }),
+      text: async () => JSON.stringify(payload),
+      json: async () => payload,
+      clone: () => ({ json: async () => payload }),
     });
     await expect(fetchCandidates()).rejects.toThrow("failed");
   });
