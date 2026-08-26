@@ -9,6 +9,7 @@ const menuItems = [
   { name: "Biometric", path: "/dashboard/biometric", roles: null },
   { name: "Voters", path: "/dashboard/voters", roles: null },
   { name: "Candidates", path: "/dashboard/candidates", roles: null },
+  { name: "Candidate Portal", path: "/dashboard/candidate-portal", roles: null },
   { name: "Polling Stations", path: "/dashboard/stations", roles: null },
   { name: "Results", path: "/dashboard/results", roles: null },
   { name: "Reports", path: "/dashboard/reports", roles: null },

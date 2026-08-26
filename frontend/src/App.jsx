@@ -38,6 +38,7 @@ import DashboardLayout from "./components/dashboard/DashboardLayout";
 import DashboardOverview from "./components/dashboard/DashboardOverview";
 import Voters from "./components/dashboard/Voters";
 import Candidates from "./components/dashboard/Candidates";
+import CandidatePortal from "./components/dashboard/CandidatePortal";
 import Stations from "./components/dashboard/Stations";
 import Results from "./components/dashboard/Results";
 import Reports from "./components/dashboard/Reports";
@@ -720,6 +721,7 @@ export default function App() {
           <Route path="elections" element={<Elections />} />
           <Route path="voters" element={<Voters />} />
           <Route path="candidates" element={<Candidates />} />
+          <Route path="candidate-portal" element={<CandidatePortal />} />
           <Route path="stations" element={<Stations />} />
           <Route path="results" element={<Results />} />
           <Route path="reports" element={<Reports />} />

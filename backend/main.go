@@ -97,6 +97,7 @@ func main() {
 	resultsHandler := &handlers.ResultsHandler{Pool: pool}
 	router.GET("/api/elections", resHandler.ListElections)
 	router.GET("/api/candidates", resHandler.ListCandidates)
+	router.GET("/api/candidates/my", middleware.RequireAuth(), resHandler.MyCandidates)
 	router.GET("/api/stations", resHandler.ListStations)
 	router.GET("/api/stats", resHandler.DashboardStats)
 	router.GET("/api/audit-logs", middleware.RequireAuth(), resHandler.AuditLogs)
@@ -106,7 +107,9 @@ func main() {
 	// Protected write routes
 	router.POST("/api/elections", middleware.RequireAuth(), middleware.RequireRole("election_administrator", "returning_officer", "presiding_officer"), crudHandler.CreateElection)
 	router.POST("/api/candidates", middleware.RequireAuth(), middleware.RequireRole("election_administrator", "returning_officer"), crudHandler.CreateCandidate)
-	router.POST("/api/stations", middleware.RequireAuth(), middleware.RequireRole("election_administrator", "returning_officer"), crudHandler.CreateStation)
+	router.POST("/api/candidates/apply", middleware.RequireAuth(), crudHandler.ApplyCandidate)
+	router.PATCH("/api/candidates/:id/status", middleware.RequireAuth(), middleware.RequireRole("election_administrator", "returning_officer"), crudHandler.UpdateCandidateStatus)
+	router.POST("/api/stations", middleware.RequireAuth(), middleware.RequireRole("election_administrator", "returning_officer", "presiding_officer"), crudHandler.CreateStation)
 	router.POST("/api/results", middleware.RequireAuth(), middleware.RequireRole("presiding_officer", "returning_officer", "election_administrator"), resultsHandler.SubmitResult)
 	router.POST("/api/results/:id/verify", middleware.RequireAuth(), middleware.RequireRole("returning_officer", "election_administrator"), resultsHandler.VerifyResult)
 	router.POST("/api/incidents", middleware.RequireAuth(), crudHandler.CreateIncident)

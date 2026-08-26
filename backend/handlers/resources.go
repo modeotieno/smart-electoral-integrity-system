@@ -72,29 +72,122 @@ func (h *ResourceHandler) ListCandidates(c *gin.Context) {
 	}
 	p := parsePagination(c)
 	search := c.Query("search")
+	statusFilter := c.Query("status")
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 	var total int
-	_ = h.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM candidates c JOIN elections e ON c.election_id=e.id WHERE ($1='' OR c.full_name ILIKE '%'||$1||'%' OR c.party ILIKE '%'||$1||'%')`, search).Scan(&total)
+	_ = h.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM candidates c JOIN elections e ON c.election_id=e.id WHERE ($1='' OR c.full_name ILIKE '%'||$1||'%' OR c.party ILIKE '%'||$1||'%') AND ($2='' OR c.status=$2)`, search, statusFilter).Scan(&total)
 	p.finalize(total)
-	rows, err := h.Pool.Query(ctx, `SELECT c.id, c.full_name, c.party, c.position, e.name as election_name FROM candidates c JOIN elections e ON c.election_id=e.id WHERE ($1='' OR c.full_name ILIKE '%'||$1||'%' OR c.party ILIKE '%'||$1||'%') ORDER BY c.id LIMIT $2 OFFSET $3`, search, p.Limit, p.Offset)
+	// try with new columns, fallback to old
+	rows, err := h.Pool.Query(ctx, `SELECT c.id, c.full_name, c.party, c.position, c.status, c.user_id, e.name as election_name, e.id as election_id, COALESCE(SUM(r.votes),0) as votes FROM candidates c JOIN elections e ON c.election_id=e.id LEFT JOIN results r ON r.candidate_id=c.id WHERE ($1='' OR c.full_name ILIKE '%'||$1||'%' OR c.party ILIKE '%'||$1||'%') AND ($2='' OR c.status=$2) GROUP BY c.id, e.name, e.id ORDER BY c.id LIMIT $3 OFFSET $4`, search, statusFilter, p.Limit, p.Offset)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "query failed"})
+		rows, err = h.Pool.Query(ctx, `SELECT c.id, c.full_name, c.party, c.position, e.name as election_name FROM candidates c JOIN elections e ON c.election_id=e.id WHERE ($1='' OR c.full_name ILIKE '%'||$1||'%' OR c.party ILIKE '%'||$1||'%') ORDER BY c.id LIMIT $2 OFFSET $3`, search, p.Limit, p.Offset)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "query failed"})
+			return
+		}
+		defer rows.Close()
+		var out []gin.H
+		for rows.Next() {
+			var id int
+			var name, party, pos, ename string
+			var partyPtr *string
+			if err := rows.Scan(&id, &name, &partyPtr, &pos, &ename); err != nil {
+				continue
+			}
+			if partyPtr != nil {
+				party = *partyPtr
+			}
+			out = append(out, gin.H{"id": id, "full_name": name, "party": party, "position": pos, "election": ename, "status": "approved"})
+		}
+		if out == nil {
+			out = []gin.H{}
+		}
+		c.JSON(http.StatusOK, gin.H{"candidates": out, "data": out, "pagination": gin.H{"page": p.Page, "limit": p.Limit, "total": p.Total, "total_pages": p.TotalPages}})
 		return
 	}
 	defer rows.Close()
 	var out []gin.H
 	for rows.Next() {
-		var id int
-		var name, party, pos, ename string
-		var partyPtr *string
-		if err := rows.Scan(&id, &name, &partyPtr, &pos, &ename); err != nil {
+		var id, eid, votes int
+		var name, party, pos, status, ename string
+		var partyPtr, statusPtr *string
+		var uidPtr *int
+		if err := rows.Scan(&id, &name, &partyPtr, &pos, &statusPtr, &uidPtr, &ename, &eid, &votes); err != nil {
 			continue
 		}
 		if partyPtr != nil {
 			party = *partyPtr
 		}
-		out = append(out, gin.H{"id": id, "full_name": name, "party": party, "position": pos, "election": ename})
+		if statusPtr != nil {
+			status = *statusPtr
+		} else {
+			status = "approved"
+		}
+		uid := 0
+		if uidPtr != nil {
+			uid = *uidPtr
+		}
+		out = append(out, gin.H{"id": id, "full_name": name, "party": party, "position": pos, "status": status, "user_id": uid, "election": ename, "election_id": eid, "votes": votes})
+	}
+	if out == nil {
+		out = []gin.H{}
+	}
+	c.JSON(http.StatusOK, gin.H{"candidates": out, "data": out, "pagination": gin.H{"page": p.Page, "limit": p.Limit, "total": p.Total, "total_pages": p.TotalPages}})
+}
+
+func (h *ResourceHandler) MyCandidates(c *gin.Context) {
+	if h.Pool == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "db unavailable"})
+		return
+	}
+	uidRaw, ok := c.Get("user_id")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+	uid, _ := uidRaw.(int)
+	p := parsePagination(c)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+	var total int
+	_ = h.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM candidates WHERE user_id=$1`, uid).Scan(&total)
+	p.finalize(total)
+	rows, err := h.Pool.Query(ctx, `SELECT c.id, c.full_name, c.party, c.position, c.status, c.rejection_reason, c.created_at, e.name, e.id, COALESCE(SUM(r.votes),0) FROM candidates c JOIN elections e ON c.election_id=e.id LEFT JOIN results r ON r.candidate_id=c.id WHERE c.user_id=$1 GROUP BY c.id, e.name, e.id ORDER BY c.created_at DESC LIMIT $2 OFFSET $3`, uid, p.Limit, p.Offset)
+	if err != nil {
+		// fallback without new cols
+		rows, err = h.Pool.Query(ctx, `SELECT c.id, c.full_name, c.party, c.position, e.name, e.id FROM candidates c JOIN elections e ON c.election_id=e.id WHERE c.user_id=$1 ORDER BY c.id LIMIT $2 OFFSET $3`, uid, p.Limit, p.Offset)
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{"candidates": []gin.H{}, "data": []gin.H{}, "pagination": gin.H{"page": p.Page, "limit": p.Limit, "total": p.Total, "total_pages": p.TotalPages}})
+			return
+		}
+	}
+	defer rows.Close()
+	var out []gin.H
+	for rows.Next() {
+		var id, eid, votes int
+		var name, party, pos, status, ename string
+		var reasonPtr, statusPtr *string
+		var created time.Time
+		var partyPtr *string
+		// try scan with new cols, if fails try old scan already handled above
+		err := rows.Scan(&id, &name, &partyPtr, &pos, &statusPtr, &reasonPtr, &created, &ename, &eid, &votes)
+		if err != nil {
+			continue
+		}
+		if partyPtr != nil {
+			party = *partyPtr
+		}
+		if statusPtr != nil {
+			status = *statusPtr
+		} else {
+			status = "pending"
+		}
+		reason := ""
+		if reasonPtr != nil {
+			reason = *reasonPtr
+		}
+		out = append(out, gin.H{"id": id, "full_name": name, "party": party, "position": pos, "status": status, "rejection_reason": reason, "created_at": created, "election": ename, "election_id": eid, "votes": votes})
 	}
 	if out == nil {
 		out = []gin.H{}

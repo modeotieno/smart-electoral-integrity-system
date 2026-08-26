@@ -86,6 +86,13 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS biometric_enrolled_at TIMESTAMP;
 -- Candidates enrichment
 ALTER TABLE candidates ADD COLUMN IF NOT EXISTS party VARCHAR(100);
 ALTER TABLE candidates ADD COLUMN IF NOT EXISTS manifesto TEXT;
+ALTER TABLE candidates ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE candidates ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending','approved','rejected'));
+ALTER TABLE candidates ADD COLUMN IF NOT EXISTS rejection_reason TEXT;
+ALTER TABLE candidates ADD COLUMN IF NOT EXISTS approved_at TIMESTAMP;
+ALTER TABLE candidates ADD COLUMN IF NOT EXISTS approved_by INTEGER REFERENCES users(id);
+CREATE INDEX IF NOT EXISTS idx_candidates_user ON candidates(user_id);
+CREATE INDEX IF NOT EXISTS idx_candidates_status ON candidates(status);
 
 -- Polling stations enrichment
 ALTER TABLE polling_stations ADD COLUMN IF NOT EXISTS county VARCHAR(100);

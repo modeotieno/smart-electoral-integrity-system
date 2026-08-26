@@ -77,9 +77,9 @@ export default function Candidates() {
           <button type="submit" className="green-btn" style={{ width:"fit-content", opacity: canCreate ? 1 : 0.5 }} disabled={!canCreate}>Add Candidate</button>
         </form>
       </div>
-      <div className="dash-card"><div className="table-responsive"><table className="dash-table"><thead><tr><th>#</th><th>Name</th><th>Party</th><th>Position</th><th>Election</th></tr></thead><tbody>
-        {list.map((c)=>(<tr key={c.id}><td>{c.id}</td><td style={{ fontWeight:700 }}>{c.full_name}</td><td>{c.party || "—"}</td><td>{c.position}</td><td>{c.election}</td></tr>))}
-        {list.length===0 && <tr><td colSpan={5} style={{ textAlign:"center", color:"#64748b", padding:20 }}>No candidates yet</td></tr>}
+      <div className="dash-card"><div className="table-responsive"><table className="dash-table"><thead><tr><th>#</th><th>Name</th><th>Party</th><th>Position</th><th>Election</th><th>Status</th><th>Votes</th></tr></thead><tbody>
+        {list.map((c)=>{ const st=c.status||"approved"; const badgeStyle = st==="approved" ? { background:"#eafaf2", color:"#16a66a" } : st==="pending" ? { background:"#fffbeb", color:"#d97706" } : { background:"#fef2f2", color:"#dc2626" }; return (<tr key={c.id}><td>{c.id}</td><td style={{ fontWeight:700 }}>{c.full_name}</td><td>{c.party || "—"}</td><td>{c.position}</td><td>{c.election}</td><td><span style={{ ...badgeStyle, padding:"2px 8px", borderRadius:999, fontSize:"0.7rem", fontWeight:700 }}>{st}</span></td><td style={{ fontWeight:700 }}>{Number(c.votes||0).toLocaleString()}</td></tr>); })}
+        {list.length===0 && <tr><td colSpan={7} style={{ textAlign:"center", color:"#64748b", padding:20 }}>No candidates yet</td></tr>}
       </tbody></table></div>
       <Pagination page={page} limit={limit} total={total} totalPages={totalPages} onPageChange={setPage} onLimitChange={(n)=>{ setLimit(n); setPage(1); }} />
       </div>

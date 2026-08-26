@@ -8,7 +8,12 @@ export default function DashboardOverview() {
   const [user, setUser] = useState(null);
   useEffect(() => {
     try { setUser(JSON.parse(localStorage.getItem("seis_user") || "null")); } catch {}
-    fetchStats().then(setStats).catch(() => setStats({ registered_voters: 0, candidates: 18, polling_stations: 1250 }));
+    const load = () => fetchStats().then(setStats).catch(() => setStats({ registered_voters: 0, candidates: 18, polling_stations: 1250 }));
+    load();
+    const id = setInterval(load, 5000);
+    const onAuth = () => load();
+    window.addEventListener("seis-auth-change", onAuth);
+    return () => { clearInterval(id); window.removeEventListener("seis-auth-change", onAuth); };
   }, []);
   const cards = [
     { label: "Registered Voters", value: stats ? `${Number(stats.registered_voters).toLocaleString()}+` : "2.5M+", icon: FiUsers, color: "#e0f2fe" },

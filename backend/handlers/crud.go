@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -90,12 +91,20 @@ func (h *CRUDHandler) CreateCandidate(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "election not found"})
 		return
 	}
+	uid, _ := c.Get("user_id")
 	var id int
+	// admin creates directly approved candidate
 	err := h.Pool.QueryRow(ctx,
-		`INSERT INTO candidates (election_id, full_name, party, position, manifesto) VALUES ($1,$2,$3,$4,$5) RETURNING id`,
-		strings.TrimSpace(req.FullName), req.Party, req.Position, req.Manifesto, req.ElectionID,
+		`INSERT INTO candidates (election_id, full_name, party, position, manifesto, status, user_id, approved_at, approved_by) VALUES ($1,$2,$3,$4,$5,'approved',$6,NOW(),$6) RETURNING id`,
+		req.ElectionID, strings.TrimSpace(req.FullName), req.Party, req.Position, req.Manifesto, uid,
 	).Scan(&id)
-	// fallback if manifesto column not yet migrated (old order)
+	if err != nil {
+		// fallback without new columns
+		err = h.Pool.QueryRow(ctx,
+			`INSERT INTO candidates (election_id, full_name, party, position, manifesto) VALUES ($1,$2,$3,$4,$5) RETURNING id`,
+			req.ElectionID, strings.TrimSpace(req.FullName), req.Party, req.Position, req.Manifesto,
+		).Scan(&id)
+	}
 	if err != nil {
 		err = h.Pool.QueryRow(ctx,
 			`INSERT INTO candidates (election_id, full_name, position) VALUES ($1,$2,$3) RETURNING id`,
@@ -106,10 +115,149 @@ func (h *CRUDHandler) CreateCandidate(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create candidate: " + err.Error()})
 		return
 	}
-	uid, _ := c.Get("user_id")
 	_, _ = h.Pool.Exec(ctx, `INSERT INTO audit_logs (user_id, action, description, ip_address) VALUES ($1,$2,$3,$4)`,
 		uid, "candidate_create", "Created candidate "+req.FullName, c.ClientIP())
 	c.JSON(http.StatusCreated, gin.H{"message": "candidate created", "id": id})
+}
+
+// ApplyCandidate lets any authenticated user (especially role=candidate) self-register as a candidate — creates pending application
+func (h *CRUDHandler) ApplyCandidate(c *gin.Context) {
+	if h.Pool == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "db unavailable"})
+		return
+	}
+	var req struct {
+		ElectionID int    `json:"election_id" binding:"required"`
+		FullName   string `json:"full_name" binding:"required,min=2,max=150"`
+		Party      string `json:"party"`
+		Position   string `json:"position" binding:"required"`
+		Manifesto  string `json:"manifesto"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+	var exists bool
+	_ = h.Pool.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM elections WHERE id=$1)`, req.ElectionID).Scan(&exists)
+	if !exists {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "election not found"})
+		return
+	}
+	uidRaw, _ := c.Get("user_id")
+	uid, _ := uidRaw.(int)
+	// prevent duplicate pending/approved for same user+election
+	var dup bool
+	_ = h.Pool.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM candidates WHERE user_id=$1 AND election_id=$2 AND status IN ('pending','approved'))`, uid, req.ElectionID).Scan(&dup)
+	if dup {
+		c.JSON(http.StatusConflict, gin.H{"error": "you already have a pending or approved application for this election"})
+		return
+	}
+	var id int
+	name := strings.TrimSpace(req.FullName)
+	if name == "" {
+		// fallback to user's full_name
+		_ = h.Pool.QueryRow(ctx, `SELECT full_name FROM users WHERE id=$1`, uid).Scan(&name)
+	}
+	err := h.Pool.QueryRow(ctx,
+		`INSERT INTO candidates (election_id, full_name, party, position, manifesto, status, user_id) VALUES ($1,$2,$3,$4,$5,'pending',$6) RETURNING id`,
+		req.ElectionID, name, req.Party, req.Position, req.Manifesto, uid,
+	).Scan(&id)
+	if err != nil {
+		err = h.Pool.QueryRow(ctx,
+			`INSERT INTO candidates (election_id, full_name, party, position, manifesto) VALUES ($1,$2,$3,$4,$5) RETURNING id`,
+			req.ElectionID, name, req.Party, req.Position, req.Manifesto,
+		).Scan(&id)
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to apply: " + err.Error()})
+		return
+	}
+	_, _ = h.Pool.Exec(ctx, `INSERT INTO audit_logs (user_id, action, description, ip_address) VALUES ($1,$2,$3,$4)`,
+		uid, "candidate_apply", "Applied as candidate for election "+strings.TrimSpace(req.Party), c.ClientIP())
+	c.JSON(http.StatusCreated, gin.H{"message": "application submitted, pending approval", "id": id, "status": "pending"})
+}
+
+func (h *CRUDHandler) UpdateCandidateStatus(c *gin.Context) {
+	if h.Pool == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "db unavailable"})
+		return
+	}
+	idStr := c.Param("id")
+	candID, err := parseID(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid candidate id"})
+		return
+	}
+	var req struct {
+		Status          string `json:"status" binding:"required"`
+		RejectionReason string `json:"rejection_reason"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	st := strings.ToLower(strings.TrimSpace(req.Status))
+	if st != "approved" && st != "rejected" && st != "pending" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "status must be approved/rejected/pending"})
+		return
+	}
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+	uidRaw, _ := c.Get("user_id")
+	uid, _ := uidRaw.(int)
+	var tagTime = "NOW()"
+	var q string
+	if st == "approved" {
+		q = `UPDATE candidates SET status='approved', approved_at=NOW(), approved_by=$1, rejection_reason=NULL WHERE id=$2`
+	} else if st == "rejected" {
+		q = `UPDATE candidates SET status='rejected', approved_by=$1, rejection_reason=$3 WHERE id=$2`
+	} else {
+		q = `UPDATE candidates SET status='pending', approved_by=NULL, approved_at=NULL, rejection_reason=NULL WHERE id=$2`
+	}
+	_ = tagTime
+	var tag interface{}
+	if st == "rejected" {
+		t, err := h.Pool.Exec(ctx, q, uid, candID, req.RejectionReason)
+		tag = t
+		if err != nil {
+			// fallback without new cols
+			_, ferr := h.Pool.Exec(ctx, `UPDATE candidates SET status=$1 WHERE id=$2`, st, candID)
+			if ferr != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "update failed: " + err.Error()})
+				return
+			}
+			c.JSON(http.StatusOK, gin.H{"message": "candidate " + st})
+			return
+		}
+		if t.RowsAffected() == 0 {
+			c.JSON(http.StatusNotFound, gin.H{"error": "candidate not found"})
+			return
+		}
+		_ = tag
+	} else {
+		t, err := h.Pool.Exec(ctx, q, uid, candID)
+		if err != nil {
+			_, ferr := h.Pool.Exec(ctx, `UPDATE candidates SET status=$1 WHERE id=$2`, st, candID)
+			if ferr != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "update failed: " + err.Error()})
+				return
+			}
+			c.JSON(http.StatusOK, gin.H{"message": "candidate " + st})
+			return
+		}
+		if t.RowsAffected() == 0 {
+			c.JSON(http.StatusNotFound, gin.H{"error": "candidate not found"})
+			return
+		}
+	}
+	_, _ = h.Pool.Exec(ctx, `INSERT INTO audit_logs (user_id, action, description) VALUES ($1,$2,$3)`, uid, "candidate_"+st, "candidate "+idStr+" -> "+st)
+	c.JSON(http.StatusOK, gin.H{"message": "candidate " + st})
+}
+
+func parseID(s string) (int, error) {
+	return strconv.Atoi(s)
 }
 
 func (h *CRUDHandler) CreateStation(c *gin.Context) {

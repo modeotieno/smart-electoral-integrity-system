@@ -144,10 +144,12 @@ export function hasRole(...allowed) {
 export const ROLES = {
   CAN_CREATE_ELECTION: ["election_administrator", "returning_officer", "presiding_officer"],
   CAN_CREATE_CANDIDATE: ["election_administrator", "returning_officer"],
-  CAN_CREATE_STATION: ["election_administrator", "returning_officer"],
+  CAN_APPLY_CANDIDATE: ["candidate", "citizen", "observer", "presiding_officer", "returning_officer", "election_administrator"],
+  CAN_CREATE_STATION: ["election_administrator", "returning_officer", "presiding_officer"],
   CAN_SUBMIT_RESULT: ["presiding_officer", "returning_officer", "election_administrator"],
   CAN_VERIFY_RESULT: ["returning_officer", "election_administrator"],
   CAN_MANAGE_USERS: ["election_administrator", "system_administrator"],
+  CAN_REVIEW_CANDIDATE: ["election_administrator", "returning_officer"],
 };
 
 export function can(permission) {
@@ -263,6 +265,26 @@ export async function createCandidate(payload) {
   const res = await apiFetch(`/api/candidates`, { method: "POST", headers: { "Content-Type": "application/json", ...authHeaders() }, body: JSON.stringify(payload) });
   const data = await parseJson(res);
   if (!res.ok) throw new Error(data.error || "Create candidate failed");
+  return data;
+}
+export async function applyCandidate(payload) {
+  const res = await apiFetch(`/api/candidates/apply`, { method: "POST", headers: { "Content-Type": "application/json", ...authHeaders() }, body: JSON.stringify(payload) });
+  const data = await parseJson(res);
+  if (!res.ok) throw new Error(data.error || "Application failed");
+  return data;
+}
+export async function fetchMyCandidates(opts = {}) {
+  const qs = buildQS(opts);
+  const res = await apiFetch(`/api/candidates/my${qs}`, { headers: { ...authHeaders() } });
+  const data = await parseJson(res);
+  if (!res.ok) throw new Error(data.error || "My candidates fetch failed");
+  if (opts.page || opts.limit) return data;
+  return data.candidates || data.data || [];
+}
+export async function updateCandidateStatus(id, payload) {
+  const res = await apiFetch(`/api/candidates/${id}/status`, { method: "PATCH", headers: { "Content-Type": "application/json", ...authHeaders() }, body: JSON.stringify(payload) });
+  const data = await parseJson(res);
+  if (!res.ok) throw new Error(data.error || "Status update failed");
   return data;
 }
 export async function createStation(payload) {
