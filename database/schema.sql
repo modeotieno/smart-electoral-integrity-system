@@ -116,8 +116,18 @@ CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
 CREATE INDEX IF NOT EXISTS idx_candidates_election ON candidates(election_id);
 CREATE INDEX IF NOT EXISTS idx_results_election ON results(election_id);
 CREATE INDEX IF NOT EXISTS idx_results_station ON results(polling_station_id);
+CREATE INDEX IF NOT EXISTS idx_results_candidate ON results(candidate_id);
+CREATE INDEX IF NOT EXISTS idx_results_verified ON results(verified);
+CREATE INDEX IF NOT EXISTS idx_results_election_candidate ON results(election_id, candidate_id);
+CREATE INDEX IF NOT EXISTS idx_results_election_station ON results(election_id, polling_station_id);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_created ON audit_logs(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_user ON audit_logs(user_id);
 CREATE INDEX IF NOT EXISTS idx_elections_status ON elections(status);
+CREATE INDEX IF NOT EXISTS idx_elections_dates ON elections(start_date, end_date);
+CREATE INDEX IF NOT EXISTS idx_candidates_user ON candidates(user_id);
+CREATE INDEX IF NOT EXISTS idx_candidates_status ON candidates(status);
+CREATE INDEX IF NOT EXISTS idx_incidents_station ON incidents(polling_station_id);
+CREATE INDEX IF NOT EXISTS idx_incidents_status ON incidents(status);
 
 -- Seed demo elections / candidates (only if empty)
 INSERT INTO elections (name, description, start_date, end_date, status)
