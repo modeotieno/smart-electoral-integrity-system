@@ -5,13 +5,17 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 
+	"github.com/modeotieno/smart-electoral-integrity-system/cache"
 	"github.com/modeotieno/smart-electoral-integrity-system/database"
 	"github.com/modeotieno/smart-electoral-integrity-system/handlers"
 	"github.com/modeotieno/smart-electoral-integrity-system/middleware"
+	"github.com/modeotieno/smart-electoral-integrity-system/metrics"
+	"github.com/modeotieno/smart-electoral-integrity-system/websocket"
 )
 
 func splitAndTrim(s, sep string) []string {
@@ -46,6 +50,10 @@ func main() {
 	router := gin.Default()
 	router.Use(middleware.SecurityHeaders())
 
+	// Initialize metrics collector
+	metricsCollector := metrics.NewMetricsCollector()
+	router.Use(middleware.MetricsMiddleware(metricsCollector))
+
 	// Enable CORS for your React app
 	allowedOrigins := []string{"http://localhost:5173", "http://localhost:3000"}
 	if v := os.Getenv("CORS_ORIGINS"); v != "" {
@@ -79,6 +87,18 @@ func main() {
 		})
 	})
 
+	// Metrics endpoint for monitoring system health
+	router.GET("/api/metrics", middleware.RequireAuth(), middleware.RequireRole("election_administrator", "returning_officer"), func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"metrics": metricsCollector.GetMetrics(),
+		})
+	})
+
+	// Initialize WebSocket hub for live election updates
+	wsHub := websocket.NewHub(pool, metricsCollector)
+	go wsHub.Run(context.Background())
+	router.GET("/api/ws/live", websocket.HandleWebSocket(wsHub))
+
 	// Auth routes — connects frontend Register / Login
 	authHandler := &handlers.AuthHandler{Pool: pool}
 	router.POST("/api/auth/register", authHandler.Register)
@@ -94,7 +114,8 @@ func main() {
 	// Resource routes — elections, candidates, stations, stats
 	resHandler := &handlers.ResourceHandler{Pool: pool}
 	crudHandler := &handlers.CRUDHandler{Pool: pool}
-	resultsHandler := &handlers.ResultsHandler{Pool: pool}
+	resultCache := cache.NewResultCache(30 * time.Second)
+	resultsHandler := &handlers.ResultsHandler{Pool: pool, Cache: resultCache, Hub: wsHub}
 	router.GET("/api/elections", resHandler.ListElections)
 	router.GET("/api/candidates", resHandler.ListCandidates)
 	router.GET("/api/candidates/my", middleware.RequireAuth(), resHandler.MyCandidates)

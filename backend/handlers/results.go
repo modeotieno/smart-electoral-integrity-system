@@ -2,16 +2,22 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/modeotieno/smart-electoral-integrity-system/cache"
+	"github.com/modeotieno/smart-electoral-integrity-system/websocket"
 )
 
 type ResultsHandler struct {
-	Pool *pgxpool.Pool
+	Pool  *pgxpool.Pool
+	Cache *cache.ResultCache
+	Hub   *websocket.Hub
 }
 
 func (h *ResultsHandler) ListResults(c *gin.Context) {
@@ -54,17 +60,55 @@ func (h *ResultsHandler) ListResults(c *gin.Context) {
 	if out == nil {
 		out = []gin.H{}
 	}
-	// aggregate totals per candidate
-	aggQuery := `SELECT c.full_name, COALESCE(SUM(r.votes),0) FROM candidates c LEFT JOIN results r ON r.candidate_id=c.id GROUP BY c.id, c.full_name ORDER BY SUM(r.votes) DESC`
-	aggRows, _ := h.Pool.Query(ctx, aggQuery)
+	// aggregate totals per candidate — use cache if available and fresh
 	var totals []gin.H
-	if aggRows != nil {
-		defer aggRows.Close()
-		for aggRows.Next() {
-			var name string
-			var total int
-			aggRows.Scan(&name, &total)
-			totals = append(totals, gin.H{"candidate": name, "total_votes": total})
+	if h.Cache != nil {
+		// Try to get from cache first (no election_id context in this query, so use stale check)
+		cachedTallies := h.Cache.GetElectionTallies(0) // 0 = cross-election aggregate
+		if len(cachedTallies) > 0 && !h.Cache.IsStale(0) {
+			for _, tally := range cachedTallies {
+				totals = append(totals, gin.H{"candidate": tally.CandidateName, "total_votes": tally.TotalVotes})
+			}
+		} else {
+			// Cache miss or stale — query database
+			aggQuery := `SELECT c.id, c.full_name, COALESCE(SUM(r.votes),0) FROM candidates c LEFT JOIN results r ON r.candidate_id=c.id GROUP BY c.id, c.full_name ORDER BY SUM(r.votes) DESC`
+			aggRows, _ := h.Pool.Query(ctx, aggQuery)
+			if aggRows != nil {
+				defer aggRows.Close()
+				var cacheTallies []*cache.CandidateTally
+				for aggRows.Next() {
+					var candID int
+					var name string
+					var total int
+					if err := aggRows.Scan(&candID, &name, &total); err != nil {
+						continue
+					}
+					totals = append(totals, gin.H{"candidate": name, "total_votes": total})
+					cacheTallies = append(cacheTallies, &cache.CandidateTally{
+						CandidateID:   candID,
+						CandidateName: name,
+						TotalVotes:    total,
+						LastUpdated:   time.Now(),
+					})
+				}
+				// Update cache
+				if h.Cache != nil && len(cacheTallies) > 0 {
+					h.Cache.SetBatch(0, cacheTallies)
+				}
+			}
+		}
+	} else {
+		// No cache available, query directly
+		aggQuery := `SELECT c.full_name, COALESCE(SUM(r.votes),0) FROM candidates c LEFT JOIN results r ON r.candidate_id=c.id GROUP BY c.id, c.full_name ORDER BY SUM(r.votes) DESC`
+		aggRows, _ := h.Pool.Query(ctx, aggQuery)
+		if aggRows != nil {
+			defer aggRows.Close()
+			for aggRows.Next() {
+				var name string
+				var total int
+				aggRows.Scan(&name, &total)
+				totals = append(totals, gin.H{"candidate": name, "total_votes": total})
+			}
 		}
 	}
 	if totals == nil {
@@ -116,6 +160,34 @@ func (h *ResultsHandler) SubmitResult(c *gin.Context) {
 	}
 	_, _ = h.Pool.Exec(ctx, `INSERT INTO audit_logs (user_id, action, description, ip_address) VALUES ($1,$2,$3,$4)`,
 		userID, "result_submit", "Submitted result votes="+strconv.Itoa(req.Votes), c.ClientIP())
+
+	// invalidate cached tallies so the next read recomputes fresh aggregates
+	if h.Cache != nil {
+		h.Cache.Clear(req.ElectionID)
+		h.Cache.Clear(0)
+	}
+
+	// push live update to connected WebSocket clients
+	if h.Hub != nil {
+		h.Hub.BroadcastResultUpdate(websocket.ResultUpdate{
+			ResultID:         id,
+			ElectionID:       req.ElectionID,
+			CandidateID:      req.CandidateID,
+			PollingStationID: req.PollingStationID,
+			Votes:            req.Votes,
+			Verified:         false,
+		})
+		var candName string
+		_ = h.Pool.QueryRow(ctx, `SELECT full_name FROM candidates WHERE id=$1`, req.CandidateID).Scan(&candName)
+		var totalVotes int
+		_ = h.Pool.QueryRow(ctx, `SELECT COALESCE(SUM(votes),0) FROM results WHERE candidate_id=$1`, req.CandidateID).Scan(&totalVotes)
+		h.Hub.BroadcastCandidateTally(websocket.CandidateTally{
+			CandidateName: candName,
+			TotalVotes:    totalVotes,
+			ElectionID:    req.ElectionID,
+		})
+	}
+
 	c.JSON(http.StatusCreated, gin.H{"message": "result submitted", "id": id})
 }
 
@@ -134,16 +206,37 @@ func (h *ResultsHandler) VerifyResult(c *gin.Context) {
 	defer cancel()
 	uid, _ := c.Get("user_id")
 	userID := uid.(int)
-	tag, err := h.Pool.Exec(ctx, `UPDATE results SET verified=true, verified_by=$1, verified_at=NOW() WHERE id=$2`, userID, id)
+	var electionID, candidateID, stationID, votes int
+	err = h.Pool.QueryRow(ctx, `UPDATE results SET verified=true, verified_by=$1, verified_at=NOW() WHERE id=$2 RETURNING election_id, candidate_id, polling_station_id, votes`,
+		userID, id).Scan(&electionID, &candidateID, &stationID, &votes)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify"})
-		return
-	}
-	if tag.RowsAffected() == 0 {
-		c.JSON(http.StatusNotFound, gin.H{"error": "result not found"})
+		if errors.Is(err, pgx.ErrNoRows) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "result not found"})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify"})
+		}
 		return
 	}
 	_, _ = h.Pool.Exec(ctx, `INSERT INTO audit_logs (user_id, action, description, ip_address) VALUES ($1,$2,$3,$4)`,
 		userID, "result_verify", "Verified result id="+idStr, c.ClientIP())
+
+	// invalidate cached tallies so the next read recomputes fresh aggregates
+	if h.Cache != nil {
+		h.Cache.Clear(electionID)
+		h.Cache.Clear(0)
+	}
+
+	// push live update to connected WebSocket clients
+	if h.Hub != nil {
+		h.Hub.BroadcastResultUpdate(websocket.ResultUpdate{
+			ResultID:         id,
+			ElectionID:       electionID,
+			CandidateID:      candidateID,
+			PollingStationID: stationID,
+			Votes:            votes,
+			Verified:         true,
+		})
+	}
+
 	c.JSON(http.StatusOK, gin.H{"message": "result verified"})
 }
