@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { fetchResults, fetchCandidates, fetchStations, fetchElections, submitResult, verifyResult, getStoredUser, ROLES, hasRole } from "../../api/api";
+import LiveUpdateManager from "../../api/liveUpdates";
 import Pagination from "../Pagination";
 import { FiLock, FiSearch } from "react-icons/fi";
 
@@ -15,6 +16,7 @@ export default function Results() {
   const [limit, setLimit] = useState(10);
   const [search, setSearch] = useState("");
   const [q, setQ] = useState("");
+  const [wsConnected, setWsConnected] = useState(false);
   const user = getStoredUser();
   const role = user?.role || "";
   const canSubmit = hasRole(...ROLES.CAN_SUBMIT_RESULT);
@@ -45,6 +47,55 @@ export default function Results() {
   useEffect(()=>{ loadResults(); }, [loadResults]);
   useEffect(loadMeta, []);
 
+  // Setup WebSocket for real-time result updates
+  useEffect(() => {
+    const wsUrl = (() => {
+      const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
+      const host = import.meta.env.VITE_API_URL 
+        ? new URL(import.meta.env.VITE_API_URL).host 
+        : window.location.host;
+      return `${proto}//${host}/api/ws/live`;
+    })();
+    
+    const manager = new LiveUpdateManager(wsUrl);
+    
+    const onConnected = () => {
+      setWsConnected(true);
+      // Subscribe to all active elections (in production, filter by user)
+      elections.forEach(el => manager.subscribe(el.id));
+    };
+    
+    const onDisconnected = () => {
+      setWsConnected(false);
+    };
+    
+    // Refresh results when new update comes in
+    const onResultUpdate = () => {
+      loadResults();
+    };
+    
+    manager.on("connected", onConnected);
+    manager.on("disconnected", onDisconnected);
+    manager.on("result_update", onResultUpdate);
+    manager.on("tally_update", onResultUpdate);
+    
+    manager.connect().catch(() => {
+      console.warn("WebSocket unavailable, using HTTP polling only");
+    });
+    
+    // Fallback: refresh every 15 seconds if WS not available
+    const pollId = setInterval(() => {
+      if (!wsConnected) {
+        loadResults();
+      }
+    }, 15000);
+    
+    return () => {
+      clearInterval(pollId);
+      manager.disconnect();
+    };
+  }, [elections, loadResults]);
+
   const onSubmit = async (e) => {
     e.preventDefault();
     setErr(""); setMsg("");
@@ -64,7 +115,19 @@ export default function Results() {
 
   return (
     <div className="dash-main">
-      <div className="dash-heading"><div><b>Results</b><small>Submit and verify — role-gated</small></div><span className="badge-status success">{pag ? `${pag.total} records` : `${data.results.length} records`}</span></div>
+      <div className="dash-heading">
+        <div>
+          <b>Results</b>
+          <small>
+            Submit and verify — role-gated {wsConnected ? (
+              <span style={{ color: "#10b981", fontWeight: 700, marginLeft: 8 }}>🔴 Live WebSocket</span>
+            ) : (
+              <span style={{ color: "#f59e0b", fontWeight: 700, marginLeft: 8 }}>📡 Polling</span>
+            )}
+          </small>
+        </div>
+        <span className="badge-status success">{pag ? `${pag.total} records` : `${data.results.length} records`}</span>
+      </div>
       {err && <div style={{ background:"#fef2f2", border:"1px solid #fecaca", color:"#dc2626", padding:10, borderRadius:8, marginBottom:12 }}>{err}</div>}
       {msg && <div style={{ background:"#f0fdf4", border:"1px solid #bbf7d0", color:"#166534", padding:10, borderRadius:8, marginBottom:12 }}>{msg}</div>}
 

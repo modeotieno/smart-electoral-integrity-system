@@ -1,19 +1,80 @@
 import React, { useEffect, useState } from "react";
 import { FiAward, FiBarChart2, FiCheck, FiMapPin, FiShield, FiUsers } from "react-icons/fi";
 import { Link } from "react-router-dom";
-import { fetchStats } from "../../api/api";
+import { fetchStats, getStoredUser } from "../../api/api";
+import LiveUpdateManager from "../../api/liveUpdates";
 
 export default function DashboardOverview() {
   const [stats, setStats] = useState(null);
   const [user, setUser] = useState(null);
+  const [liveConnected, setLiveConnected] = useState(false);
+  const [wsManager, setWsManager] = useState(null);
+
   useEffect(() => {
     try { setUser(JSON.parse(localStorage.getItem("seis_user") || "null")); } catch {}
+    
     const load = () => fetchStats().then(setStats).catch(() => setStats({ registered_voters: 0, candidates: 18, polling_stations: 1250 }));
     load();
-    const id = setInterval(load, 5000);
+    
+    // Initial poll every 10 seconds (fallback if WS unavailable)
+    const pollId = setInterval(load, 10000);
+    
+    // Setup WebSocket for live updates
+    const wsUrl = (() => {
+      const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
+      const host = import.meta.env.VITE_API_URL 
+        ? new URL(import.meta.env.VITE_API_URL).host 
+        : window.location.host;
+      return `${proto}//${host}/api/ws/live`;
+    })();
+    
+    const manager = new LiveUpdateManager(wsUrl);
+    
+    // Connection handlers
+    const onConnected = () => {
+      setLiveConnected(true);
+      // Try to subscribe to all active elections
+      // In a real app, you'd get the active election ID
+      manager.subscribe(1);
+    };
+    
+    const onDisconnected = () => {
+      setLiveConnected(false);
+    };
+    
+    const onError = (err) => {
+      console.error("WebSocket error:", err);
+    };
+    
+    // Real-time update handler
+    const onResultUpdate = () => {
+      // Refresh stats when we get a new result
+      load();
+    };
+    
+    manager.on("connected", onConnected);
+    manager.on("disconnected", onDisconnected);
+    manager.on("error", onError);
+    manager.on("result_update", onResultUpdate);
+    manager.on("tally_update", onResultUpdate);
+    
+    // Attempt WebSocket connection (won't block if it fails)
+    manager.connect().catch(() => {
+      console.warn("WebSocket unavailable, using HTTP polling");
+    });
+    
+    setWsManager(manager);
+    
     const onAuth = () => load();
     window.addEventListener("seis-auth-change", onAuth);
-    return () => { clearInterval(id); window.removeEventListener("seis-auth-change", onAuth); };
+    
+    return () => {
+      clearInterval(pollId);
+      window.removeEventListener("seis-auth-change", onAuth);
+      if (manager) {
+        manager.disconnect();
+      }
+    };
   }, []);
   const cards = [
     { label: "Registered Voters", value: stats ? `${Number(stats.registered_voters).toLocaleString()}+` : "2.5M+", icon: FiUsers, color: "#e0f2fe" },
@@ -26,7 +87,14 @@ export default function DashboardOverview() {
       <div className="dash-heading" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
         <div>
           <b style={{ fontSize: "1.4rem" }}>Welcome, {user?.full_name || "Election Official"} 👋</b>
-          <small style={{ display: "block", color: "var(--slate-500)" }}>{user?.role ? `Role: ${user.role}` : "General overview of the election"} • Live data from backend</small>
+          <small style={{ display: "block", color: "var(--slate-500)" }}>
+            {user?.role ? `Role: ${user.role}` : "General overview of the election"} • 
+            {liveConnected ? (
+              <span style={{ color: "#10b981", fontWeight: 700 }}>🔴 Live data (WebSocket)</span>
+            ) : (
+              <span style={{ color: "#f59e0b", fontWeight: 700 }}>📡 Polling updates</span>
+            )}
+          </small>
         </div>
         <div style={{ display: "flex", gap: 10 }}>
           <Link to="/biometric" className="green-btn small"><FiShield /> Biometric</Link>
