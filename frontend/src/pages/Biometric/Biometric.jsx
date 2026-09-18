@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import { FiCamera, FiCheck, FiCpu, FiEye, FiCrosshair, FiShield, FiUpload, FiUserCheck } from "react-icons/fi";
+import { getApiUrl } from "../../api/api";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
+const API_URL = getApiUrl() === "(relative)" ? "" : getApiUrl();
 
 export default function Biometric() {
   const [mode, setMode] = useState("fingerprint"); // fingerprint | face | iris

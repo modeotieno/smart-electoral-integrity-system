@@ -1,7 +1,7 @@
 import React, { useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FiArrowRight, FiCamera, FiCheck, FiCrosshair, FiLock, FiMail, FiShield, FiUpload, FiUser } from "react-icons/fi";
-import { register } from "../../api/api";
+import { register, enrollBiometric } from "../../api/api";
 
 const roles = [
   { value: "citizen", label: "Citizen / Voter" },
@@ -63,14 +63,7 @@ export default function Register() {
   const enrollBioAfter = async () => {
     if (!bioCaptured) return;
     try {
-      const token = localStorage.getItem("seis_token");
-      const res = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:8080"}/api/biometric/enroll`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: token ? `Bearer ${token}` : "" },
-        body: JSON.stringify({ biometric_type: bioType, biometric_data: bioCaptured.substring(0, 2000) }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      const data = await enrollBiometric({ biometric_type: bioType, biometric_data: bioCaptured.substring(0, 2000) });
       setMsg("Biometric enrolled: " + data.biometric_type);
     } catch (e) { setError(e.message); }
   };

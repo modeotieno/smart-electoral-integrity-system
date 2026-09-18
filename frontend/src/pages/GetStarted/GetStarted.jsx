@@ -1,8 +1,11 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { register, login } from '../../api/api';
 import './GetStarted.css';
 
 // Changed to default export to match App.jsx import
 export default function GetStarted() {
+  const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -25,20 +28,21 @@ export default function GetStarted() {
       return;
     }
 
-    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
-    const endpoint = isLogin ? '/api/login' : '/api/register';
+    if (!isLogin && formData.password.length < 8) {
+      setStatus({ loading: false, message: 'Password must be at least 8 characters!', error: true });
+      return;
+    }
 
     try {
-      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || (isLogin ? 'Login failed' : 'Registration failed'));
+      if (isLogin) {
+        await login({ email: formData.email, password: formData.password });
+      } else {
+        await register({
+          full_name: formData.name,
+          email: formData.email,
+          password: formData.password,
+          role: 'citizen',
+        });
       }
 
       setStatus({
@@ -48,6 +52,7 @@ export default function GetStarted() {
       });
 
       setFormData({ name: '', email: '', password: '', confirmPassword: '' });
+      navigate('/dashboard');
     } catch (err) {
       setStatus({ loading: false, message: err.message, error: true });
     }
