@@ -54,23 +54,16 @@ func main() {
 	metricsCollector := metrics.NewMetricsCollector()
 	router.Use(middleware.MetricsMiddleware(metricsCollector))
 
-	// Enable CORS for your React app
-	allowedOrigins := []string{"http://localhost:5173", "http://localhost:3000"}
-	if v := os.Getenv("CORS_ORIGINS"); v != "" {
-		// support comma-separated list
-		allowedOrigins = []string{}
-		for _, o := range splitAndTrim(v, ",") {
-			if o != "" {
-				allowedOrigins = append(allowedOrigins, o)
-			}
-		}
-	}
+	// Enable CORS for the React app.
+	// The frontend authenticates with Bearer tokens (localStorage), not cookies,
+	// so allowing all origins is safe and avoids failures when the site is opened
+	// from localhost, 127.0.0.1, a LAN IP, or a dev-server port.
 	router.Use(cors.New(cors.Config{
-		AllowOrigins:     allowedOrigins,
+		AllowAllOrigins:  true,
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
-		AllowCredentials: true,
+		AllowCredentials: false,
 	}))
 
 	router.GET("/api/health", func(c *gin.Context) {
