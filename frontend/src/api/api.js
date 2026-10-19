@@ -1,16 +1,13 @@
-// Flexible API URL: supports empty string (relative via nginx proxy), explicit URL, or localhost fallback.
-// In prod behind nginx, set VITE_API_URL="" to use same-origin /api via proxy.
+// API URL resolution:
+// - VITE_API_URL="" (docker/prod) → relative /api via nginx proxy
+// - VITE_API_URL unset (npm run dev) → relative /api via vite dev proxy (see vite.config.js)
+// - Never hardcode an absolute host — relative URLs work from any address the site is opened on.
 const API_URL = (() => {
   const raw = import.meta.env.VITE_API_URL;
   if (raw !== undefined && raw !== null) {
-    const trimmed = String(raw).trim();
-    if (trimmed === "") return ""; // relative — uses nginx /api proxy
-    return trimmed.replace(/\/$/, "");
+    return String(raw).trim().replace(/\/$/, "");
   }
-  if (typeof window !== "undefined" && window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1") {
-    return window.location.origin;
-  }
-  return "http://localhost:8080";
+  return "";
 })();
 
 function authHeaders() {
@@ -20,10 +17,17 @@ function authHeaders() {
 
 async function apiFetch(path, options = {}) {
   const url = `${API_URL}${path}`;
-  const res = await fetch(url, {
-    ...options,
-    headers: { ...(options.headers || {}) },
-  });
+  let res;
+  try {
+    res = await fetch(url, {
+      ...options,
+      headers: { ...(options.headers || {}) },
+    });
+  } catch {
+    throw new Error(
+      `Cannot reach the SEIS server at ${API_URL || window.location.origin}. Please make sure the backend is running (docker compose up -d) and you opened the site from http://localhost:5173.`
+    );
+  }
   // 401 → token expired/invalid → auto logout
   if (res.status === 401) {
     let body = {};
@@ -81,7 +85,7 @@ export async function register({ full_name, email, password, role }) {
     body: JSON.stringify({ full_name, email, password, role }),
   });
   const data = await parseJson(res);
-  if (!res.ok) throw new Error(data.error || "Registration failed");
+  if (!res.ok) throw new Error(data.error || `Registration failed (server responded HTTP ${res.status})`);
   if (data.token) localStorage.setItem("seis_token", data.token);
   if (data.user) localStorage.setItem("seis_user", JSON.stringify(data.user));
   // notify AuthContext listeners
@@ -96,7 +100,7 @@ export async function login({ email, password }) {
     body: JSON.stringify({ email, password }),
   });
   const data = await parseJson(res);
-  if (!res.ok) throw new Error(data.error || "Login failed");
+  if (!res.ok) throw new Error(data.error || `Login failed (server responded HTTP ${res.status})`);
   if (data.token) localStorage.setItem("seis_token", data.token);
   if (data.user) localStorage.setItem("seis_user", JSON.stringify(data.user));
   window.dispatchEvent(new Event("seis-auth-change"));

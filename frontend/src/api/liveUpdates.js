@@ -9,17 +9,31 @@ class LiveUpdateManager {
     this.listeners = {}; // event -> [callbacks]
     this.connectedAt = null;
     this.subscriptions = new Set(); // Set of election IDs subscribed
+    this.closed = false;
+    this.reconnectTimer = null;
   }
 
   /**
    * Connect to WebSocket server
    */
   connect() {
-    return new Promise((resolve, reject) => {
-      try {
-        this.ws = new WebSocket(this.wsUrl);
+    if (
+      this.ws &&
+      (this.ws.readyState === WebSocket.CONNECTING || this.ws.readyState === WebSocket.OPEN)
+    ) {
+      return Promise.resolve();
+    }
 
-        this.ws.onopen = () => {
+    this.closed = false;
+
+    return new Promise((resolve, reject) => {
+      let ws;
+      try {
+        ws = new WebSocket(this.wsUrl);
+        this.ws = ws;
+
+        ws.onopen = () => {
+          if (this.ws !== ws) return;
           console.log("[WS] Connected to live update server");
           this.connectedAt = new Date();
           this.reconnectAttempts = 0;
@@ -27,7 +41,8 @@ class LiveUpdateManager {
           resolve();
         };
 
-        this.ws.onmessage = (event) => {
+        ws.onmessage = (event) => {
+          if (this.ws !== ws) return;
           try {
             const msg = JSON.parse(event.data);
             this.handleMessage(msg);
@@ -36,13 +51,16 @@ class LiveUpdateManager {
           }
         };
 
-        this.ws.onerror = (error) => {
+        ws.onerror = (error) => {
+          if (this.ws !== ws) return;
           console.error("[WS] Connection error:", error);
           this.emit("error", { error: error.message });
           reject(error);
         };
 
-        this.ws.onclose = () => {
+        ws.onclose = () => {
+          if (this.ws !== ws) return;
+          this.ws = null;
           console.log("[WS] Disconnected from live update server");
           this.emit("disconnected", { timestamp: new Date() });
           this.attemptReconnect();
@@ -135,12 +153,15 @@ class LiveUpdateManager {
    * Attempt to reconnect
    */
   attemptReconnect() {
+    if (this.closed) return;
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++;
       console.log(
         `[WS] Reconnecting (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts}) in ${this.reconnectDelay}ms`
       );
-      setTimeout(() => {
+      this.reconnectTimer = setTimeout(() => {
+        this.reconnectTimer = null;
+        if (this.closed) return;
         this.connect().catch(() => {
           // Will recursively attempt again
         });
@@ -166,8 +187,16 @@ class LiveUpdateManager {
    * Disconnect gracefully
    */
   disconnect() {
-    if (this.ws) {
-      this.ws.close();
+    this.closed = true;
+    this.reconnectAttempts = 0;
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+    const ws = this.ws;
+    this.ws = null;
+    if (ws && ws.readyState !== WebSocket.CLOSED) {
+      ws.close();
     }
   }
 
