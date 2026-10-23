@@ -1,12 +1,13 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { FiMail, FiKey, FiArrowRight, FiShield, FiCheck } from "react-icons/fi";
+import { FiMail, FiKey, FiArrowRight, FiShield, FiCheck, FiEye, FiEyeOff } from "react-icons/fi";
 import { login } from "../../api/api";
 
 export default function Login() {
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
   const onSubmit = async (e) => {
@@ -98,16 +99,37 @@ export default function Login() {
 
             <div className="form-group">
               <label htmlFor="password">Password</label>
-              <div className="input-wrapper">
+              <div className="input-wrapper" style={{ position: "relative" }}>
                 <FiKey />
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   id="password"
                   placeholder="Enter your password"
                   value={form.password}
                   onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))}
                   required
+                  style={{ paddingRight: 42 }}
                 />
+                <button
+                  type="button"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  onClick={() => setShowPassword((v) => !v)}
+                  style={{
+                    position: "absolute",
+                    right: 12,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    background: "transparent",
+                    border: "none",
+                    color: "var(--slate-500)",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  {showPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
+                </button>
               </div>
             </div>
 

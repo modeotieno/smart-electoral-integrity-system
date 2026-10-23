@@ -1,6 +1,6 @@
 import React, { useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { FiArrowRight, FiCamera, FiCheck, FiCrosshair, FiLock, FiMail, FiShield, FiUpload, FiUser } from "react-icons/fi";
+import { FiArrowRight, FiCamera, FiCheck, FiCrosshair, FiEye, FiEyeOff, FiLock, FiMail, FiShield, FiUpload, FiUser } from "react-icons/fi";
 import { register, enrollBiometric } from "../../api/api";
 
 const roles = [
@@ -23,6 +23,8 @@ export default function Register() {
   const [bioCaptured, setBioCaptured] = useState("");
   const [bioType, setBioType] = useState("fingerprint");
   const [showBio, setShowBio] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const [camOn, setCamOn] = useState(false);
@@ -167,17 +169,75 @@ export default function Register() {
 
             <div className="form-group">
               <label htmlFor="password">Password</label>
-              <div className="input-wrapper">
+              <div className="input-wrapper" style={{ position: "relative" }}>
                 <FiLock />
-                <input id="password" name="password" type="password" placeholder="Create a password (min 8 chars)" value={form.password} onChange={onChange} required />
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Create a password (min 8 chars)"
+                  value={form.password}
+                  onChange={onChange}
+                  required
+                  style={{ paddingRight: 42 }}
+                />
+                <button
+                  type="button"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  onClick={() => setShowPassword((v) => !v)}
+                  style={{
+                    position: "absolute",
+                    right: 12,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    background: "transparent",
+                    border: "none",
+                    color: "var(--slate-500)",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  {showPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
+                </button>
               </div>
             </div>
 
             <div className="form-group">
               <label htmlFor="confirm">Confirm Password</label>
-              <div className="input-wrapper">
+              <div className="input-wrapper" style={{ position: "relative" }}>
                 <FiLock />
-                <input id="confirm" name="confirm" type="password" placeholder="Repeat your password" value={form.confirm} onChange={onChange} required />
+                <input
+                  id="confirm"
+                  name="confirm"
+                  type={showConfirmPassword ? "text" : "password"}
+                  placeholder="Repeat your password"
+                  value={form.confirm}
+                  onChange={onChange}
+                  required
+                  style={{ paddingRight: 42 }}
+                />
+                <button
+                  type="button"
+                  aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+                  onClick={() => setShowConfirmPassword((v) => !v)}
+                  style={{
+                    position: "absolute",
+                    right: 12,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    background: "transparent",
+                    border: "none",
+                    color: "var(--slate-500)",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  {showConfirmPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
+                </button>
               </div>
             </div>
 
