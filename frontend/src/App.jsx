@@ -45,11 +45,13 @@ import { getToken, getStoredUser } from "./api/api";
 
 import GetStarted from "./pages/GetStarted/GetStarted.jsx";
 import LoginPage from "./pages/Login/Login.jsx";
+import LiveStreamPage from "./pages/LiveStream/LiveStream";
 
 import "./App.css";
 
 const navItems = [
   ["Home", "/"],
+  ["Live Stream", "/live-stream"],
   ["About", "/about"],
   ["Features", "/features"],
   ["How It Works", "/how-it-works"],
@@ -592,6 +594,8 @@ export default function App() {
           <Route path="biometric" element={<BiometricPageWrapper />} />
         </Route>
 
+        <Route path="/live-stream" element={<LiveStreamPage />} />
+        <Route path="/live" element={<LiveStreamPage />} />
         {/* Public Marketing/Website Pages */}
         <Route element={<PublicLayout />}>
           <Route path="/" element={<HomeLayout />} />
@@ -604,6 +608,8 @@ export default function App() {
           <Route path="/signup" element={<GetStarted />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/biometric" element={<BiometricPageWrapper />} />
+          <Route path="/live-stream" element={<LiveStreamPage />} />
+          <Route path="/live" element={<LiveStreamPage />} />
         </Route>
       </Routes>
     </Router>

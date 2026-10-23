@@ -1,73 +1,70 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { FiAward, FiBarChart2, FiCheck, FiMapPin, FiShield, FiUsers } from "react-icons/fi";
 import { Link } from "react-router-dom";
-import { fetchStats, getStoredUser } from "../../api/api";
+import { fetchResults, fetchStats, getStoredUser } from "../../api/api";
 import LiveUpdateManager from "../../api/liveUpdates";
+
+const toNumeric = (value, fallback = 0) => {
+  const n = Number(value ?? fallback);
+  return Number.isFinite(n) ? n : fallback;
+};
 
 export default function DashboardOverview() {
   const [stats, setStats] = useState(null);
   const [user, setUser] = useState(null);
   const [liveConnected, setLiveConnected] = useState(false);
-  const [wsManager, setWsManager] = useState(null);
+  const [stream, setStream] = useState({ totals: [], results: [] });
+
+  const loadLiveData = () => {
+    fetchStats().then(setStats).catch(() => setStats({ registered_voters: 0, candidates: 18, polling_stations: 1250 }));
+    fetchResults({ page: 1, limit: 10 }).then((payload) => {
+      const results = Array.isArray(payload?.results) ? payload.results : Array.isArray(payload?.data) ? payload.data : [];
+      const totals = Array.isArray(payload?.totals) && payload.totals.length ? payload.totals : [];
+      setStream({ results, totals });
+    }).catch(() => setStream({ results: [], totals: [] }));
+  };
 
   useEffect(() => {
     try { setUser(JSON.parse(localStorage.getItem("seis_user") || "null")); } catch {}
-    
-    const load = () => fetchStats().then(setStats).catch(() => setStats({ registered_voters: 0, candidates: 18, polling_stations: 1250 }));
-    load();
-    
-    // Initial poll every 10 seconds (fallback if WS unavailable)
-    const pollId = setInterval(load, 10000);
-    
-    // Setup WebSocket for live updates
+
+    loadLiveData();
+    const pollId = setInterval(loadLiveData, 10000);
+
     const wsUrl = (() => {
       const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
-      const host = import.meta.env.VITE_API_URL 
-        ? new URL(import.meta.env.VITE_API_URL).host 
+      const host = import.meta.env.VITE_API_URL
+        ? new URL(import.meta.env.VITE_API_URL).host
         : window.location.host;
       return `${proto}//${host}/api/ws/live`;
     })();
-    
+
     const manager = new LiveUpdateManager(wsUrl);
-    
-    // Connection handlers
+
     const onConnected = () => {
       setLiveConnected(true);
-      // Try to subscribe to all active elections
-      // In a real app, you'd get the active election ID
       manager.subscribe(1);
     };
-    
+
     const onDisconnected = () => {
       setLiveConnected(false);
     };
-    
-    const onError = (err) => {
-      console.error("WebSocket error:", err);
-    };
-    
-    // Real-time update handler
+
     const onResultUpdate = () => {
-      // Refresh stats when we get a new result
-      load();
+      loadLiveData();
     };
-    
+
     manager.on("connected", onConnected);
     manager.on("disconnected", onDisconnected);
-    manager.on("error", onError);
     manager.on("result_update", onResultUpdate);
     manager.on("tally_update", onResultUpdate);
-    
-    // Attempt WebSocket connection (won't block if it fails)
+
     manager.connect().catch(() => {
       console.warn("WebSocket unavailable, using HTTP polling");
     });
-    
-    setWsManager(manager);
-    
-    const onAuth = () => load();
+
+    const onAuth = () => loadLiveData();
     window.addEventListener("seis-auth-change", onAuth);
-    
+
     return () => {
       clearInterval(pollId);
       window.removeEventListener("seis-auth-change", onAuth);
@@ -76,12 +73,28 @@ export default function DashboardOverview() {
       }
     };
   }, []);
+
+  const totals = useMemo(() => {
+    if (stream.totals.length) return [...stream.totals].sort((a, b) => toNumeric(b.total_votes ?? b.votes ?? 0) - toNumeric(a.total_votes ?? a.votes ?? 0));
+    const byCandidate = new Map();
+    stream.results.forEach((row) => {
+      const name = row.candidate || row.full_name || "Candidate";
+      byCandidate.set(name, (byCandidate.get(name) || 0) + toNumeric(row.votes ?? 0));
+    });
+    return [...byCandidate.entries()].map(([candidate, total_votes]) => ({ candidate, total_votes }));
+  }, [stream]);
+
+  const liveLeader = totals[0];
+  const totalVotesCast = stream.results.reduce((sum, row) => sum + toNumeric(row.votes ?? 0), 0);
+  const maxVotes = totals.length ? Math.max(...totals.map((item) => toNumeric(item.total_votes ?? item.votes ?? 0))) : 1;
+
   const cards = [
     { label: "Registered Voters", value: stats ? `${Number(stats.registered_voters).toLocaleString()}+` : "2.5M+", icon: FiUsers, color: "#e0f2fe" },
     { label: "Candidates", value: stats?.candidates ?? 18, icon: FiAward, color: "#f3e8ff" },
     { label: "Polling Stations", value: stats ? Number(stats.polling_stations).toLocaleString() : "1,250", icon: FiMapPin, color: "#ffedd5" },
     { label: "Biometric Enrolled", value: stats?.biometric_enrolled ?? "—", icon: FiShield, color: "#eafaf2" },
   ];
+
   return (
     <div className="dash-main" style={{ background: "var(--slate-50)", minHeight: "100vh" }}>
       <div className="dash-heading" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
@@ -90,13 +103,14 @@ export default function DashboardOverview() {
           <small style={{ display: "block", color: "var(--slate-500)" }}>
             {user?.role ? `Role: ${user.role}` : "General overview of the election"} • 
             {liveConnected ? (
-              <span style={{ color: "#10b981", fontWeight: 700 }}>🔴 Live data (WebSocket)</span>
+              <span style={{ color: "#10b981", fontWeight: 700 }}>🔴 Live stream active</span>
             ) : (
-              <span style={{ color: "#f59e0b", fontWeight: 700 }}>📡 Polling updates</span>
+              <span style={{ color: "#f59e0b", fontWeight: 700 }}>📡 Polling live updates</span>
             )}
           </small>
         </div>
         <div style={{ display: "flex", gap: 10 }}>
+          <Link to="/live-stream" className="green-btn small"><FiBarChart2 /> Live Stream</Link>
           <Link to="/biometric" className="green-btn small"><FiShield /> Biometric</Link>
           <Link to="/dashboard/reports" className="outline-btn" style={{ color: "var(--navy-900)", borderColor: "var(--slate-300)", minHeight: 40 }}><FiBarChart2 /> Reports</Link>
         </div>
@@ -111,9 +125,43 @@ export default function DashboardOverview() {
         ))}
       </div>
 
-
-
       <div className="dash-content-grid" style={{ marginTop: 18 }}>
+        <div className="dash-card">
+          <div className="dash-card-header"><h3>Live Election Progress</h3><span className="view-all">{liveConnected ? "Live • active" : "Standby"}</span></div>
+          <div style={{ display: "grid", gap: 16 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
+              <div>
+                <div style={{ color: "var(--slate-500)", fontSize: 12, textTransform: "uppercase", letterSpacing: "0.08em" }}>Votes counted</div>
+                <b style={{ fontSize: "1.8rem", color: "var(--navy-900)" }}>{totalVotesCast.toLocaleString()}</b>
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <div style={{ color: "var(--slate-500)", fontSize: 12, textTransform: "uppercase", letterSpacing: "0.08em" }}>Leading</div>
+                <b style={{ color: "var(--green-600)" }}>{liveLeader ? liveLeader.candidate : "Waiting for votes"}</b>
+              </div>
+            </div>
+
+            {totals.length === 0 ? (
+              <div style={{ padding: 16, borderRadius: 10, background: "#f8fafc", color: "#64748b" }}>No live totals yet. Results will appear as ballots are submitted.</div>
+            ) : (
+              totals.slice(0, 4).map((item) => {
+                const voteValue = toNumeric(item.total_votes ?? item.votes ?? 0);
+                const percent = Math.max(10, (voteValue / maxVotes) * 100);
+                return (
+                  <div key={`${item.candidate}-progress`}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                      <span style={{ fontWeight: 700 }}>{item.candidate}</span>
+                      <span style={{ color: "var(--slate-500)" }}>{voteValue.toLocaleString()} votes</span>
+                    </div>
+                    <div style={{ height: 10, borderRadius: 999, background: "#e2e8f0", overflow: "hidden" }}>
+                      <div style={{ width: `${percent}%`, height: "100%", borderRadius: 999, background: "linear-gradient(90deg, #10b981 0%, #22c55e 100%)" }} />
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+
         <div className="dash-card">
           <div className="dash-card-header"><h3>Integrity Timeline</h3><span className="view-all">{stats ? `Live • ${new Date().toLocaleTimeString()}` : "Live"}</span></div>
           <div style={{ display: "grid", gap: 12 }}>
@@ -126,14 +174,6 @@ export default function DashboardOverview() {
               <div><b>Results pipeline</b><p className="text-muted" style={{ margin: 0 }}>Aggregating from {stats?.polling_stations ?? 3} stations</p></div>
             </div>
           </div>
-        </div>
-        <div className="dash-card">
-          <div className="dash-card-header"><h3>Audit Preview</h3><Link to="/dashboard/reports" className="view-all">View all →</Link></div>
-          <p className="text-muted">Recent actions are cryptographically logged.</p>
-          <div style={{ background: "#0b132b", color: "#cbd5e1", padding: 12, borderRadius: 10, fontFamily: "monospace", fontSize: "0.8rem", marginTop: 10 }}>
-            [audit] user_register • SEIS demo <br /> [audit] biometric_enroll • fingerprint <br /> [audit] user_login • token issued
-          </div>
-          <Link to="/biometric" style={{ display: "inline-flex", marginTop: 12, color: "var(--green-600)", fontWeight: 700 }}>Enroll biometric →</Link>
         </div>
       </div>
     </div>
