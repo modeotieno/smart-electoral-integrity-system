@@ -1,3 +1,10 @@
+import {
+  clearAuthSession,
+  getStoredUser as readStoredUser,
+  getToken as readToken,
+  saveAuthSession,
+} from "../auth/session";
+
 // API URL resolution:
 // - VITE_API_URL="" (docker/prod) → relative /api via nginx proxy
 // - VITE_API_URL unset (npm run dev) → relative /api via vite dev proxy (see vite.config.js)
@@ -11,7 +18,7 @@ const API_URL = (() => {
 })();
 
 function authHeaders() {
-  const token = localStorage.getItem("seis_token");
+  const token = readToken();
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
@@ -28,7 +35,6 @@ async function apiFetch(path, options = {}) {
       `Cannot reach the SEIS server at ${API_URL || window.location.origin}. Please make sure the backend is running (docker compose up -d) and you opened the site from http://localhost:5173.`
     );
   }
-  // 401 → token expired/invalid → auto logout
   if (res.status === 401) {
     let body = {};
     try {
@@ -37,12 +43,9 @@ async function apiFetch(path, options = {}) {
     } catch {
       body = {};
     }
-    // only auto-logout for auth endpoints, not public ones
     if (path.includes("/auth/") || path.includes("/biometric/") || path.includes("/users") || path.includes("/audit-logs")) {
-      // Don't auto-redirect during background poll; just clear
       if (body.error && body.error.includes("expired")) {
-        logout();
-        // soft redirect if in browser
+        clearAuthSession();
         if (typeof window !== "undefined" && !window.location.pathname.includes("/login")) {
           console.warn("Session expired, logged out");
         }
@@ -53,7 +56,6 @@ async function apiFetch(path, options = {}) {
 }
 
 async function parseJson(res) {
-  // Support both fetch mocks (json) and real responses (text) — test mocks use json()
   if (typeof res.text === "function") {
     const text = await res.text();
     try {
@@ -78,32 +80,79 @@ export async function checkBackend() {
   return parseJson(res);
 }
 
-export async function register({ full_name, email, password, role }) {
+function normalizeRegisterInput(input = {}) {
+  const rawFullName = input.full_name ?? input.name ?? input.fullName ?? input.fullname ?? "";
+  const rawEmail = input.email ?? input.username ?? "";
+  const rawRole = input.role ?? input.userType ?? input.accountType ?? input.role_name ?? input.roleName ?? "citizen";
+
+  return {
+    full_name: String(rawFullName).trim(),
+    name: String(rawFullName).trim(),
+    email: String(rawEmail).trim().toLowerCase(),
+    password: String(input.password ?? ""),
+    role: String(rawRole).trim() || "citizen",
+    userType: String(rawRole).trim() || "citizen",
+    accountType: String(rawRole).trim() || "citizen",
+  };
+}
+
+export async function register(input = {}) {
+  const payload = normalizeRegisterInput(input);
   const res = await apiFetch(`/api/auth/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ full_name, email, password, role }),
+    body: JSON.stringify({
+      ...payload,
+      full_name: payload.full_name,
+      name: payload.name,
+      role: payload.role,
+      userType: payload.userType,
+      accountType: payload.accountType,
+    }),
   });
   const data = await parseJson(res);
   if (!res.ok) throw new Error(data.error || `Registration failed (server responded HTTP ${res.status})`);
-  if (data.token) localStorage.setItem("seis_token", data.token);
-  if (data.user) localStorage.setItem("seis_user", JSON.stringify(data.user));
-  // notify AuthContext listeners
-  window.dispatchEvent(new Event("seis-auth-change"));
+
+  if (data.token) {
+    await saveAuthSession(data.token, data.user || null);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("seis-auth-change"));
+    }
+  }
+
   return data;
 }
 
-export async function login({ email, password }) {
+function normalizeLoginInput(input = {}) {
+  const rawEmail = input.email ?? input.username ?? input.userName ?? "";
+  return {
+    email: String(rawEmail).trim().toLowerCase(),
+    username: String(rawEmail).trim().toLowerCase(),
+    password: String(input.password ?? ""),
+  };
+}
+
+export async function login(input = {}) {
+  const payload = normalizeLoginInput(input);
   const res = await apiFetch(`/api/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({
+      ...payload,
+      email: payload.email,
+      username: payload.username,
+    }),
   });
   const data = await parseJson(res);
   if (!res.ok) throw new Error(data.error || `Login failed (server responded HTTP ${res.status})`);
-  if (data.token) localStorage.setItem("seis_token", data.token);
-  if (data.user) localStorage.setItem("seis_user", JSON.stringify(data.user));
-  window.dispatchEvent(new Event("seis-auth-change"));
+
+  if (data.token) {
+    await saveAuthSession(data.token, data.user || null);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("seis-auth-change"));
+    }
+  }
+
   return data;
 }
 
@@ -116,26 +165,23 @@ export async function me() {
   return data;
 }
 
-export function logout() {
-  localStorage.removeItem("seis_token");
-  localStorage.removeItem("seis_user");
-  window.dispatchEvent(new Event("seis-auth-change"));
-}
-
-export function getStoredUser() {
-  try {
-    return JSON.parse(localStorage.getItem("seis_user") || "null");
-  } catch {
-    return null;
+export async function logout() {
+  await clearAuthSession();
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("seis-auth-change"));
   }
 }
 
+export function getStoredUser() {
+  return readStoredUser();
+}
+
 export function getToken() {
-  return localStorage.getItem("seis_token");
+  return readToken();
 }
 
 export function getRole() {
-  const u = getStoredUser();
+  const u = readStoredUser();
   return u?.role || "";
 }
 
@@ -144,7 +190,6 @@ export function hasRole(...allowed) {
   return allowed.includes(role);
 }
 
-// Centralized RBAC map mirrors backend middleware.RequireRole
 export const ROLES = {
   CAN_CREATE_ELECTION: ["election_administrator", "returning_officer", "presiding_officer"],
   CAN_CREATE_CANDIDATE: ["election_administrator", "returning_officer"],
@@ -171,6 +216,7 @@ export async function enrollBiometric({ biometric_type, biometric_data }) {
   if (!res.ok) throw new Error(data.error || "Biometric enroll failed");
   return data;
 }
+
 export async function verifyBiometric({ email, biometric_data }) {
   const res = await apiFetch(`/api/biometric/verify`, {
     method: "POST",
@@ -181,12 +227,14 @@ export async function verifyBiometric({ email, biometric_data }) {
   if (!res.ok) throw new Error(data.error || "Biometric verify failed");
   return data;
 }
+
 export async function biometricStatus() {
   const res = await apiFetch(`/api/biometric/status`, { headers: { ...authHeaders() } });
   const data = await parseJson(res);
   if (!res.ok) throw new Error(data.error || "Status failed");
   return data;
 }
+
 export async function fetchStats() {
   const res = await apiFetch(`/api/stats`);
   const data = await parseJson(res);
@@ -211,6 +259,7 @@ export async function fetchElections(opts = {}) {
   if (opts.page || opts.limit || opts.search !== undefined) return data;
   return data.elections || data.data || [];
 }
+
 export async function fetchCandidates(opts = {}) {
   const qs = buildQS(opts);
   const res = await apiFetch(`/api/candidates${qs}`);
