@@ -54,85 +54,66 @@ const features = [
   },
 ];
 
+function FeaturesHeroSection() {
+  return (
+    <section className="features-hero">
+      <div className="features-hero-content">
+        <span className="eyebrow">ELECTION FEATURES</span>
+
+        <h1>
+          Powerful Features for
+          <span> Election Integrity</span>
+        </h1>
+
+        <p>
+          Explore the security, transparency and verification features
+          demonstrated by the Smart Electoral Integrity System.
+        </p>
+      </div>
+    </section>
+  );
+}
+
+function FeaturesDetailSection() {
+  return (
+    <section className="feature-details-section">
+      <div className="feature-details-heading">
+        <span className="eyebrow">SEIS CAPABILITIES</span>
+
+        <h2>Built Around Trust</h2>
+
+        <p>
+          Every feature is designed around the principles of security,
+          transparency and accountability.
+        </p>
+      </div>
+
+      <div className="feature-details-grid">
+        {features.map(({ id, icon: Icon, title, description }) => (
+          <article id={id} className="feature-detail-card" key={id}>
+            <div className="feature-detail-icon">
+              <Icon />
+            </div>
+
+            <div>
+              <span className="feature-number">SEIS FEATURE</span>
+
+              <h3>{title}</h3>
+
+              <p>{description}</p>
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export default function FeaturesPage() {
   return (
     <div className="features-page">
-
-      {/* HERO */}
-
-      <section className="features-hero">
-        <div className="features-hero-content">
-
-          <span className="eyebrow">
-            ELECTION FEATURES
-          </span>
-
-          <h1>
-            Powerful Features for
-            <span> Election Integrity</span>
-          </h1>
-
-          <p>
-            Explore the security, transparency and verification features
-            demonstrated by the Smart Electoral Integrity System.
-          </p>
-
-        </div>
-      </section>
-
-
-      {/* FEATURES */}
-
-      <section className="feature-details-section">
-
-        <div className="feature-details-heading">
-          <span className="eyebrow">
-            SEIS CAPABILITIES
-          </span>
-
-          <h2>
-            Built Around Trust
-          </h2>
-
-          <p>
-            Every feature is designed around the principles of security,
-            transparency and accountability.
-          </p>
-        </div>
-
-
-        <div className="feature-details-grid">
-
-          {features.map(
-            ({ id, icon: Icon, title, description }) => (
-              <article
-                id={id}
-                className="feature-detail-card"
-                key={id}
-              >
-
-                <div className="feature-detail-icon">
-                  <Icon />
-                </div>
-
-                <div>
-                  <span className="feature-number">
-                    SEIS FEATURE
-                  </span>
-
-                  <h3>{title}</h3>
-
-                  <p>{description}</p>
-                </div>
-
-              </article>
-            )
-          )}
-
-        </div>
-
-      </section>
-
+      <FeaturesHeroSection />
+      <FeaturesDetailSection />
     </div>
   );
 }
