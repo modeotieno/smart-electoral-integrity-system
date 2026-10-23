@@ -34,9 +34,9 @@ func normalizeRole(r string) string {
 	if r == "" {
 		return "citizen"
 	}
-	// map common UI labels
+	// map common UI labels and app payload aliases
 	switch r {
-	case "citizen", "voter":
+	case "citizen", "voter", "user", "mobile_user", "web_user", "member":
 		return "citizen"
 	case "election observer", "observer":
 		return "observer"
@@ -55,16 +55,46 @@ func normalizeRole(r string) string {
 	return "citizen"
 }
 
+func firstNonEmpty(values ...string) string {
+	for _, v := range values {
+		if strings.TrimSpace(v) != "" {
+			return strings.TrimSpace(v)
+		}
+	}
+	return ""
+}
+
+func normalizeName(values ...string) string {
+	return strings.TrimSpace(firstNonEmpty(values...))
+}
+
 type registerRequest struct {
-	FullName string `json:"full_name" binding:"required,min=2,max=150"`
-	Email    string `json:"email" binding:"required,email,max=150"`
-	Password string `json:"password" binding:"required,min=8,max=72"`
-	Role     string `json:"role"`
+	FullName    string `json:"full_name"`
+	Name        string `json:"name"`
+	FullNameAlt string `json:"fullName"`
+	Email       string `json:"email"`
+	Password    string `json:"password"`
+	Role        string `json:"role"`
+	UserType    string `json:"userType"`
+	AccountType string `json:"accountType"`
+	RoleName    string `json:"role_name"`
+}
+
+func (r *registerRequest) normalize() {
+	r.FullName = normalizeName(r.FullName, r.Name, r.FullNameAlt)
+	r.Email = strings.ToLower(strings.TrimSpace(r.Email))
+	r.Role = normalizeRole(firstNonEmpty(r.Role, r.UserType, r.AccountType, r.RoleName))
 }
 
 type loginRequest struct {
-	Email    string `json:"email" binding:"required,email"`
-	Password string `json:"password" binding:"required"`
+	Email    string `json:"email"`
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+func (r *loginRequest) normalize() {
+	r.Email = strings.ToLower(strings.TrimSpace(firstNonEmpty(r.Email, r.Username)))
+	r.Password = strings.TrimSpace(r.Password)
 }
 
 func (h *AuthHandler) Register(c *gin.Context) {
@@ -77,8 +107,20 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
-	role := normalizeRole(req.Role)
+	req.normalize()
+	if strings.TrimSpace(req.FullName) == "" || len(req.FullName) < 2 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "full name is required"})
+		return
+	}
+	if req.Email == "" || !strings.Contains(req.Email, "@") {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "valid email is required"})
+		return
+	}
+	if len(req.Password) < 8 || len(req.Password) > 72 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "password must be between 8 and 72 characters"})
+		return
+	}
+	role := req.Role
 
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
@@ -143,7 +185,15 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
+	req.normalize()
+	if req.Email == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "email is required"})
+		return
+	}
+	if req.Password == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "password is required"})
+		return
+	}
 
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
