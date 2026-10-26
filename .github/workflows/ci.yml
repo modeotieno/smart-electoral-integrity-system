@@ -90,12 +90,20 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Validate compose
-        run: docker compose config && docker compose -f docker-compose.yml -f docker-compose.prod.yml config
+      - name: Validate dev compose
+        run: docker compose config
+
+      - name: Validate prod compose
+        env:
+          CORS_ORIGINS: http://localhost:5173
+          JWT_SECRET: ci-dummy-32chars-long-enough
+          VITE_API_URL: http://localhost:8080
+          POSTGRES_PASSWORD: dummy-pass
+        run: |
+          touch .env
+          docker compose -f docker-compose.yml -f docker-compose.prod.yml config
 
       - name: Build images (no push)
         run: |
           docker compose build backend frontend
-          # also validate prod build with dummy secrets
-          CORS_ORIGINS=http://localhost:5173 JWT_SECRET=ci-dummy-32chars-long-enough VITE_API_URL=http://localhost:8080 POSTGRES_PASSWORD=dummy-pass docker compose -f docker-compose.yml -f docker-compose.prod.yml config
           echo "docker builds OK"
