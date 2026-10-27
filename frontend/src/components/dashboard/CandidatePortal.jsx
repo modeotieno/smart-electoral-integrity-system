@@ -3,6 +3,19 @@ import { fetchCandidates, fetchElections, fetchMyCandidates, applyCandidate, upd
 import Pagination from "../Pagination";
 import { FiCheck, FiClock, FiX, FiSearch, FiAward } from "react-icons/fi";
 
+const toArray = (value) => Array.isArray(value) ? value : [];
+const normalizePageData = (payload, fallback = []) => {
+  if (Array.isArray(payload)) return { items: payload, total: payload.length, totalPages: 1 };
+  if (!payload || typeof payload !== "object") return { items: fallback, total: 0, totalPages: 1 };
+  const items = toArray(payload.candidates ?? payload.data ?? payload.results ?? fallback);
+  const pageMeta = payload.pagination || {};
+  return {
+    items,
+    total: Number(pageMeta.total ?? items.length ?? 0),
+    totalPages: Number(pageMeta.total_pages || 1),
+  };
+};
+
 export default function CandidatePortal() {
   const user = getStoredUser();
   const role = user?.role || "";
@@ -27,21 +40,32 @@ export default function CandidatePortal() {
   useEffect(() => { setForm((p) => ({ ...p, full_name: user?.full_name || p.full_name })); }, [user?.full_name]);
 
   const loadElections = useCallback(() => {
-    fetchElections().then((d) => setElections(Array.isArray(d) ? d : d.elections || d.data || [])).catch(() => {});
+    fetchElections().then((d) => setElections(Array.isArray(d) ? d : toArray(d?.elections ?? d?.data))).catch(() => setElections([]));
   }, []);
   const loadMy = useCallback(async () => {
     try {
       const data = await fetchMyCandidates({ page: pageMy, limit: limitMy });
-      if (Array.isArray(data)) { setMyApps(data); setTotalMy(data.length); setTotalPagesMy(1); }
-      else { setMyApps(data.candidates || data.data || []); const p = data.pagination || {}; setTotalMy(p.total ?? 0); setTotalPagesMy(p.total_pages || 1); }
-    } catch (e) { /* silent if table not migrated yet */ setMyApps([]); }
+      const normalized = normalizePageData(data, []);
+      setMyApps(normalized.items);
+      setTotalMy(normalized.total);
+      setTotalPagesMy(Math.max(1, normalized.totalPages || 1));
+    } catch (e) {
+      setMyApps([]);
+      setErr(e?.message || "Unable to load candidate applications.");
+    }
   }, [pageMy, limitMy]);
   const loadAll = useCallback(async () => {
     try {
       const data = await fetchCandidates({ page: pageAll, limit: limitAll, search: q });
-      if (Array.isArray(data)) { setAllCandidates(data); setTotalAll(data.length); setTotalPagesAll(1); }
-      else { setAllCandidates(data.candidates || data.data || []); const p = data.pagination || {}; setTotalAll(p.total ?? 0); setTotalPagesAll(p.total_pages || 1); }
-    } catch (e) { setErr(e.message); }
+      const normalized = normalizePageData(data, []);
+      setAllCandidates(normalized.items);
+      setTotalAll(normalized.total);
+      setTotalPagesAll(Math.max(1, normalized.totalPages || 1));
+      setErr("");
+    } catch (e) {
+      setAllCandidates([]);
+      setErr(e?.message || "Unable to load candidates.");
+    }
   }, [pageAll, limitAll, q]);
 
   useEffect(() => { loadElections(); }, [loadElections]);
@@ -127,7 +151,7 @@ export default function CandidatePortal() {
       <div className="dash-card">
         <h3 style={{ marginBottom:10, display:"flex", alignItems:"center", gap:8 }}>All Candidates {isReviewer && <span style={{ fontSize:"0.7rem", background:"#eafaf2", color:"#16a66a", padding:"2px 8px", borderRadius:999 }}>reviewer: {role}</span>}</h3>
         <div className="table-responsive"><table className="dash-table"><thead><tr><th>#</th><th>Name</th><th>Party</th><th>Position</th><th>Election</th><th>Status</th><th>Votes</th>{isReviewer && <th>Review</th>}</tr></thead><tbody>
-          {allCandidates.map((c)=>(<tr key={c.id}><td>{c.id}</td><td style={{ fontWeight:700 }}>{c.full_name}</td><td>{c.party || "—"}</td><td>{c.position}</td><td>{c.election}</td><td>{badge(c.status || "approved")}</td><td style={{ fontWeight:700 }}>{Number(c.votes||0).toLocaleString()}</td>{isReviewer && <td><div style={{ display:"flex", gap:6 }}>{c.status!=="approved" && <button onClick={()=>onReview(c.id,"approved")} className="green-btn small" style={{ minHeight:28, padding:"0 10px" }}>Approve</button>}{c.status!=="rejected" && <button onClick={()=>onReview(c.id,"rejected")} className="outline-btn" style={{ minHeight:28, padding:"0 10px", color:"#dc2626", borderColor:"#fecaca" }}>Reject</button>}</div></td>}</tr>))}
+          {allCandidates.map((c)=>(<tr key={c.id}><td>{c.id}</td><td style={{ fontWeight:700 }}>{c.full_name}</td><td>{c.party || "—"}</td><td>{c.position}</td><td>{c.election}</td><td>{badge(c.status || "approved")}</td><td style={{ fontWeight:700 }}>{Number(c.votes||0).toLocaleString()}</td>{isReviewer && <td><div style={{ display:"flex", gap:6 }}>{c.status!="approved" && <button onClick={()=>onReview(c.id,"approved")} className="green-btn small" style={{ minHeight:28, padding:"0 10px" }}>Approve</button>}{c.status!="rejected" && <button onClick={()=>onReview(c.id,"rejected")} className="outline-btn" style={{ minHeight:28, padding:"0 10px", color:"#dc2626", borderColor:"#fecaca" }}>Reject</button>}</div></td>}</tr>))}
           {allCandidates.length===0 && <tr><td colSpan={isReviewer ? 8 : 7} style={{ textAlign:"center", color:"#64748b", padding:20 }}>No candidates yet</td></tr>}
         </tbody></table></div>
         <Pagination page={pageAll} limit={limitAll} total={totalAll} totalPages={totalPagesAll} onPageChange={setPageAll} onLimitChange={(n)=>{ setLimitAll(n); setPageAll(1); }} />

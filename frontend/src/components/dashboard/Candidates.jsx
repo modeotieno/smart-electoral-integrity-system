@@ -3,6 +3,35 @@ import { fetchCandidates, fetchElections, createCandidate, getStoredUser, ROLES,
 import { FiLock, FiSearch } from "react-icons/fi";
 import Pagination from "../Pagination";
 
+const toArray = (value) => Array.isArray(value) ? value : [];
+const normalizeCandidatePayload = (payload) => {
+  if (Array.isArray(payload)) return { items: payload, total: payload.length, totalPages: 1 };
+  if (!payload || typeof payload !== "object") return { items: [], total: 0, totalPages: 1 };
+  const items = toArray(payload.candidates ?? payload.data ?? payload.results);
+  const pageMeta = payload.pagination || {};
+  return {
+    items,
+    total: Number(pageMeta.total ?? items.length ?? 0),
+    totalPages: Number(pageMeta.total_pages || 1),
+  };
+};
+
+const getCandidateSite = (candidate) => {
+  return candidate?.site || candidate?.position || candidate?.election || "General Election";
+};
+
+const getCandidatePollingStation = (candidate) => {
+  return candidate?.polling_station || candidate?.station || candidate?.pollingStation || "—";
+};
+
+const getCandidateCounty = (candidate) => {
+  return candidate?.county || candidate?.county_name || "—";
+};
+
+const getCandidateSubcounty = (candidate) => {
+  return candidate?.subcounty || candidate?.sub_county || candidate?.location || "—";
+};
+
 export default function Candidates() {
   const [list, setList] = useState([]);
   const [elections, setElections] = useState([]);
@@ -15,21 +44,30 @@ export default function Candidates() {
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState("");
   const [q, setQ] = useState("");
+  const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     setErr("");
+    setLoading(true);
     try {
       const data = await fetchCandidates({ page, limit, search: q });
-      if (Array.isArray(data)) { setList(data); setTotal(data.length); setTotalPages(1); }
-      else { setList(data.candidates || data.data || []); const p = data.pagination||{}; setTotal(p.total ?? 0); setTotalPages(p.total_pages||1); }
-    } catch (e) { setErr(e.message); }
+      const normalized = normalizeCandidatePayload(data);
+      setList(normalized.items);
+      setTotal(normalized.total);
+      setTotalPages(Math.max(1, normalized.totalPages || 1));
+    } catch (e) {
+      setList([]);
+      setErr(e?.message || "No candidate data available right now.");
+    } finally {
+      setLoading(false);
+    }
   }, [page, limit, q]);
 
   const user = getStoredUser();
   const role = user?.role || "";
   const canCreate = hasRole(...ROLES.CAN_CREATE_CANDIDATE);
 
-  const loadElections = () => fetchElections().then((d)=> setElections(Array.isArray(d)?d:(d.elections||d.data||[]))).catch(()=>{});
+  const loadElections = () => fetchElections().then((d)=> setElections(Array.isArray(d)?d:(d.elections||d.data||[]))).catch(()=>setElections([]));
 
   useEffect(() => { load(); }, [load]);
   useEffect(loadElections, []);
@@ -77,11 +115,17 @@ export default function Candidates() {
           <button type="submit" className="green-btn" style={{ width:"fit-content", opacity: canCreate ? 1 : 0.5 }} disabled={!canCreate}>Add Candidate</button>
         </form>
       </div>
-      <div className="dash-card"><div className="table-responsive"><table className="dash-table"><thead><tr><th>#</th><th>Name</th><th>Party</th><th>Position</th><th>Election</th><th>Status</th><th>Votes</th></tr></thead><tbody>
-        {list.map((c)=>{ const st=c.status||"approved"; const badgeStyle = st==="approved" ? { background:"#eafaf2", color:"#16a66a" } : st==="pending" ? { background:"#fffbeb", color:"#d97706" } : { background:"#fef2f2", color:"#dc2626" }; return (<tr key={c.id}><td>{c.id}</td><td style={{ fontWeight:700 }}>{c.full_name}</td><td>{c.party || "—"}</td><td>{c.position}</td><td>{c.election}</td><td><span style={{ ...badgeStyle, padding:"2px 8px", borderRadius:999, fontSize:"0.7rem", fontWeight:700 }}>{st}</span></td><td style={{ fontWeight:700 }}>{Number(c.votes||0).toLocaleString()}</td></tr>); })}
-        {list.length===0 && <tr><td colSpan={7} style={{ textAlign:"center", color:"#64748b", padding:20 }}>No candidates yet</td></tr>}
+      <div className="dash-card"><div className="table-responsive"><table className="dash-table"><thead><tr><th>#</th><th>Name</th><th>Position</th><th>Site</th><th>Polling Station</th><th>County</th><th>Subcounty</th><th>Status</th><th>Votes</th></tr></thead><tbody>
+        {loading ? (
+          <tr><td colSpan={9} style={{ textAlign:"center", color:"#64748b", padding:20 }}>Loading candidates…</td></tr>
+        ) : (
+          <>
+            {list.map((c)=>{ const st=c.status||"approved"; const badgeStyle = st==="approved" ? { background:"#eafaf2", color:"#16a66a" } : st==="pending" ? { background:"#fffbeb", color:"#d97706" } : { background:"#fef2f2", color:"#dc2626" }; return (<tr key={c.id}><td>{c.id}</td><td style={{ fontWeight:700 }}>{c.full_name}</td><td>{c.position || "—"}</td><td>{getCandidateSite(c)}</td><td>{getCandidatePollingStation(c)}</td><td>{getCandidateCounty(c)}</td><td>{getCandidateSubcounty(c)}</td><td><span style={{ ...badgeStyle, padding:"2px 8px", borderRadius:999, fontSize:"0.7rem", fontWeight:700 }}>{st}</span></td><td style={{ fontWeight:700 }}>{Number(c.votes||0).toLocaleString()}</td></tr>); })}
+            {list.length===0 && <tr><td colSpan={9} style={{ textAlign:"center", color:"#64748b", padding:20 }}>No candidates yet</td></tr>}
+          </>
+        )}
       </tbody></table></div>
-      <Pagination page={page} limit={limit} total={total} totalPages={totalPages} onPageChange={setPage} onLimitChange={(n)=>{ setLimit(n); setPage(1); }} />
+      {!loading && <Pagination page={page} limit={limit} total={total} totalPages={totalPages} onPageChange={setPage} onLimitChange={(n)=>{ setLimit(n); setPage(1); }} />}
       </div>
     </div>
   );
