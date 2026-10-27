@@ -54,15 +54,12 @@ func main() {
 	metricsCollector := metrics.NewMetricsCollector()
 	router.Use(middleware.MetricsMiddleware(metricsCollector))
 
-	// Enable CORS for the React app.
-	// The frontend authenticates with Bearer tokens (localStorage), not cookies,
-	// so allowing all origins is safe and avoids failures when the site is opened
-	// from localhost, 127.0.0.1, a LAN IP, or a dev-server port.
+	// Enable CORS for the website, mobile app, and local device testing.
 	router.Use(cors.New(cors.Config{
 		AllowAllOrigins:  true,
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
-		ExposeHeaders:    []string{"Content-Length"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "X-Requested-With"},
+		ExposeHeaders:    []string{"Content-Length", "Authorization"},
 		AllowCredentials: false,
 	}))
 
@@ -77,6 +74,8 @@ func main() {
 			"status":   "ok",
 			"message":  "SEIS backend is running",
 			"database": dbStatus,
+			"environment": os.Getenv("GIN_MODE"),
+			"timestamp": time.Now().UTC().Format(time.RFC3339),
 		})
 	})
 

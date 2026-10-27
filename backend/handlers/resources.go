@@ -79,9 +79,9 @@ func (h *ResourceHandler) ListCandidates(c *gin.Context) {
 	_ = h.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM candidates c JOIN elections e ON c.election_id=e.id WHERE ($1='' OR c.full_name ILIKE '%'||$1||'%' OR c.party ILIKE '%'||$1||'%') AND ($2='' OR c.status=$2)`, search, statusFilter).Scan(&total)
 	p.finalize(total)
 	// try with new columns, fallback to old
-	rows, err := h.Pool.Query(ctx, `SELECT c.id, c.full_name, c.party, c.position, c.status, c.user_id, e.name as election_name, e.id as election_id, COALESCE(SUM(r.votes),0) as votes FROM candidates c JOIN elections e ON c.election_id=e.id LEFT JOIN results r ON r.candidate_id=c.id WHERE ($1='' OR c.full_name ILIKE '%'||$1||'%' OR c.party ILIKE '%'||$1||'%') AND ($2='' OR c.status=$2) GROUP BY c.id, e.name, e.id ORDER BY c.id LIMIT $3 OFFSET $4`, search, statusFilter, p.Limit, p.Offset)
+	rows, err := h.Pool.Query(ctx, `SELECT c.id, c.full_name, c.party, c.position, c.status, c.user_id, e.name as election_name, e.id as election_id, COALESCE(SUM(r.votes),0) as votes, COALESCE(ps.name,'') as polling_station, COALESCE(ps.county,'') as county, COALESCE(ps.location,'') as subcounty FROM candidates c JOIN elections e ON c.election_id=e.id LEFT JOIN results r ON r.candidate_id=c.id LEFT JOIN polling_stations ps ON ps.id=r.polling_station_id WHERE ($1='' OR c.full_name ILIKE '%'||$1||'%' OR c.party ILIKE '%'||$1||'%') AND ($2='' OR c.status=$2) GROUP BY c.id, e.name, e.id, ps.name, ps.county, ps.location ORDER BY c.id LIMIT $3 OFFSET $4`, search, statusFilter, p.Limit, p.Offset)
 	if err != nil {
-		rows, err = h.Pool.Query(ctx, `SELECT c.id, c.full_name, c.party, c.position, e.name as election_name FROM candidates c JOIN elections e ON c.election_id=e.id WHERE ($1='' OR c.full_name ILIKE '%'||$1||'%' OR c.party ILIKE '%'||$1||'%') ORDER BY c.id LIMIT $2 OFFSET $3`, search, p.Limit, p.Offset)
+		rows, err = h.Pool.Query(ctx, `SELECT c.id, c.full_name, c.party, c.position, e.name as election_name, COALESCE(ps.name,'') as polling_station, COALESCE(ps.county,'') as county, COALESCE(ps.location,'') as subcounty FROM candidates c JOIN elections e ON c.election_id=e.id LEFT JOIN results r ON r.candidate_id=c.id LEFT JOIN polling_stations ps ON ps.id=r.polling_station_id WHERE ($1='' OR c.full_name ILIKE '%'||$1||'%' OR c.party ILIKE '%'||$1||'%') ORDER BY c.id LIMIT $2 OFFSET $3`, search, p.Limit, p.Offset)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "query failed"})
 			return
@@ -90,15 +90,15 @@ func (h *ResourceHandler) ListCandidates(c *gin.Context) {
 		var out []gin.H
 		for rows.Next() {
 			var id int
-			var name, party, pos, ename string
+			var name, party, pos, ename, stationName, county, subcounty string
 			var partyPtr *string
-			if err := rows.Scan(&id, &name, &partyPtr, &pos, &ename); err != nil {
+			if err := rows.Scan(&id, &name, &partyPtr, &pos, &ename, &stationName, &county, &subcounty); err != nil {
 				continue
 			}
 			if partyPtr != nil {
 				party = *partyPtr
 			}
-			out = append(out, gin.H{"id": id, "full_name": name, "party": party, "position": pos, "election": ename, "status": "approved"})
+			out = append(out, gin.H{"id": id, "full_name": name, "party": party, "position": pos, "election": ename, "site": ename, "polling_station": stationName, "county": county, "subcounty": subcounty, "status": "approved"})
 		}
 		if out == nil {
 			out = []gin.H{}
@@ -110,10 +110,10 @@ func (h *ResourceHandler) ListCandidates(c *gin.Context) {
 	var out []gin.H
 	for rows.Next() {
 		var id, eid, votes int
-		var name, party, pos, status, ename string
+		var name, party, pos, status, ename, stationName, county, subcounty string
 		var partyPtr, statusPtr *string
 		var uidPtr *int
-		if err := rows.Scan(&id, &name, &partyPtr, &pos, &statusPtr, &uidPtr, &ename, &eid, &votes); err != nil {
+		if err := rows.Scan(&id, &name, &partyPtr, &pos, &statusPtr, &uidPtr, &ename, &eid, &votes, &stationName, &county, &subcounty); err != nil {
 			continue
 		}
 		if partyPtr != nil {
@@ -128,7 +128,7 @@ func (h *ResourceHandler) ListCandidates(c *gin.Context) {
 		if uidPtr != nil {
 			uid = *uidPtr
 		}
-		out = append(out, gin.H{"id": id, "full_name": name, "party": party, "position": pos, "status": status, "user_id": uid, "election": ename, "election_id": eid, "votes": votes})
+		out = append(out, gin.H{"id": id, "full_name": name, "party": party, "position": pos, "status": status, "user_id": uid, "election": ename, "site": ename, "election_id": eid, "votes": votes, "polling_station": stationName, "county": county, "subcounty": subcounty})
 	}
 	if out == nil {
 		out = []gin.H{}
@@ -250,12 +250,12 @@ func (h *ResourceHandler) DashboardStats(c *gin.Context) {
 	h.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM candidates`).Scan(&candidates)
 	h.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM users WHERE biometric_enrolled=true`).Scan(&bioEnrolled)
 	c.JSON(http.StatusOK, gin.H{
-		"registered_voters": users,
-		"elections":         elections,
-		"polling_stations":  stations,
-		"candidates":        candidates,
+		"registered_voters":  users,
+		"elections":          elections,
+		"polling_stations":   stations,
+		"candidates":         candidates,
 		"biometric_enrolled": bioEnrolled,
-		"system_uptime":     "99.9%",
+		"system_uptime":      "99.9%",
 	})
 }
 

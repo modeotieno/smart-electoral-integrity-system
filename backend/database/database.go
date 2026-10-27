@@ -12,7 +12,29 @@ func dsnFromEnv() string {
 	if v := os.Getenv("DATABASE_URL"); v != "" {
 		return v
 	}
-	return "postgres://seis_user:seis_password@localhost:5432/seis_db?sslmode=disable"
+
+	host := os.Getenv("DB_HOST")
+	if host == "" {
+		host = "localhost"
+	}
+	port := os.Getenv("DB_PORT")
+	if port == "" {
+		port = "5432"
+	}
+	user := os.Getenv("DB_USER")
+	if user == "" {
+		user = "seis_user"
+	}
+	password := os.Getenv("DB_PASSWORD")
+	if password == "" {
+		password = "seis_password"
+	}
+	name := os.Getenv("DB_NAME")
+	if name == "" {
+		name = "seis_db"
+	}
+
+	return "postgres://" + user + ":" + password + "@" + host + ":" + port + "/" + name + "?sslmode=disable"
 }
 
 // Connect returns a *pgxpool.Pool suitable for concurrent use.
