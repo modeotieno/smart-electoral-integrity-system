@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -8,12 +9,26 @@ class ApiService {
     if (configured.trim().isNotEmpty) {
       return configured.trim().replaceAll(RegExp(r'/+$'), '');
     }
+    if (kIsWeb) {
+      return 'http://localhost:8080';
+    }
     return 'http://10.0.2.2:8080';
   }
 
   static Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('seis_token');
+  }
+
+  static Future<Map<String, dynamic>?> getUser() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString('seis_user');
+    if (raw == null || raw.isEmpty) return null;
+    try {
+      return jsonDecode(raw) as Map<String, dynamic>;
+    } catch (_) {
+      return null;
+    }
   }
 
   static Future<void> saveSession(String token, Map<String, dynamic>? user) async {
