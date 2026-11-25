@@ -205,7 +205,7 @@ Provide an interface that works across desktop, tablet, and mobile screen sizes.
 
 ## 📲 Mobile Application
 
-A Flutter-based mobile application is planned to provide mobile access to selected system functionality.
+A Flutter-based mobile application provides mobile access to selected system functionality, including an installable browser PWA.
 
 ---
 
@@ -470,7 +470,7 @@ smart-electoral-integrity-system/
 * [x] Frontend Development
 * [x] Testing (`backend/handlers/*_test.go`, `frontend/src/api/*.test.js`)
 * [x] Deployment (Docker + `docker-compose.prod.yml:1`)
-* [ ] Mobile Application (Flutter planned)
+* [x] Mobile Application (Flutter native + installable web PWA)
 
 ---
 
@@ -523,6 +523,35 @@ See the [LICENSE](LICENSE) file for more information.
 **Aspiring Software Developer | Full Stack Software Developer | ICT Professional**
 
 ---
+
+## Contact form delivery setup
+
+The `/contact` form posts to `POST /api/contact`. Every submission is saved in `contact_messages`, then delivered to email and/or phone depending on the credentials configured in `.env`.
+
+1. Copy `.env.example` to `.env`.
+2. For Gmail delivery, enable 2-step verification on the Gmail account, create an **App password**, and set:
+   - `SMTP_USER` — the full Gmail address
+   - `SMTP_PASSWORD` — the 16-character app password (not the normal Gmail password)
+   - `CONTACT_EMAIL_FROM` — the same Gmail address
+   - `CONTACT_EMAIL_TO` — the Gmail inbox that should receive messages
+3. For SMS delivery, set `SMS_PROVIDER` to one of:
+   - `twilio` with `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, and `TWILIO_FROM`
+   - `africastalking` with `AFRICASTALKING_USERNAME` and `AFRICASTALKING_API_KEY`
+4. Set `SMS_TO` to the phone number in international format, e.g. `+254727822752`.
+5. Restart the stack with `make up` (or `docker compose up --build -d`).
+
+Email uses Gmail SMTP on port 587 by default (`SMTP_HOST`, `SMTP_PORT` are configurable). If no database, SMTP, or SMS credentials are configured, the endpoint returns a configuration error instead of silently dropping messages. Submissions are limited to 5 per 10 minutes per IP address.
+
+## Mobile browser app (PWA)
+
+The Flutter app can also run as an installable browser app. From the repository root:
+
+```bash
+make mobile-web
+make mobile-up
+```
+
+Open `http://localhost:5174` and use the browser’s **Install app** action. The PWA uses the same `/api` proxy as the React app, so login, registration, and dashboards work the same way. Real phones require HTTPS; see `mobile/README.md` for API overrides and native build commands.
 
 ## Project Vision
 

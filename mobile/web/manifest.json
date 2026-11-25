@@ -1,11 +1,15 @@
 {
+    "id": "./",
     "name": "Smart Electoral Integrity System - SEIS Mobile",
     "short_name": "SEIS Mobile",
     "start_url": ".",
+    "scope": ".",
     "display": "standalone",
     "background_color": "#071426",
     "theme_color": "#071426",
     "description": "Secure, verifiable digital voting and electoral integrity platform.",
+    "lang": "en",
+    "categories": ["education", "productivity"],
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

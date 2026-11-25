@@ -76,6 +76,18 @@ CREATE TABLE IF NOT EXISTS incidents (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS contact_messages (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(150) NOT NULL,
+    email VARCHAR(150) NOT NULL,
+    subject VARCHAR(200) NOT NULL,
+    message TEXT NOT NULL,
+    ip_address VARCHAR(45),
+    email_sent BOOLEAN DEFAULT FALSE,
+    sms_sent BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Biometric extension idempotent
 ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS biometric_type VARCHAR(30) DEFAULT 'none';
@@ -128,6 +140,7 @@ CREATE INDEX IF NOT EXISTS idx_candidates_user ON candidates(user_id);
 CREATE INDEX IF NOT EXISTS idx_candidates_status ON candidates(status);
 CREATE INDEX IF NOT EXISTS idx_incidents_station ON incidents(polling_station_id);
 CREATE INDEX IF NOT EXISTS idx_incidents_status ON incidents(status);
+CREATE INDEX IF NOT EXISTS idx_contact_messages_created ON contact_messages(created_at DESC);
 
 -- Seed demo elections / candidates (only if empty)
 INSERT INTO elections (name, description, start_date, end_date, status)

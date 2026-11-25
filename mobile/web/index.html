@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <base href="$FLUTTER_BASE_HREF">
 
@@ -7,37 +7,136 @@
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="description" content="Smart Electoral Integrity System (SEIS) - Mobile App">
-
-  <!-- Chrome, Android & Web App Manifest -->
   <meta name="theme-color" content="#071426">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="application-name" content="SEIS Mobile">
-
-  <!-- iOS meta tags & icons -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="SEIS Mobile">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="manifest" href="manifest.json">
 
-  <!-- Favicon -->
-  <link rel="icon" type="image/png" href="favicon.png"/>
+  <style>
+    #seis-install {
+      position: fixed;
+      right: 16px;
+      bottom: 16px;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      max-width: calc(100vw - 32px);
+      padding: 10px 12px;
+      border-radius: 14px;
+      background: #071426;
+      color: #fff;
+      border: 1px solid #1e293b;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+      font-family: system-ui, -apple-system, sans-serif;
+      font-size: 14px;
+    }
+    #seis-install[hidden] { display: none; }
+    #seis-install-copy { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    #seis-install-copy small { color: #cbd5e1; font-size: 11px; line-height: 1.35; }
+    #seis-install button {
+      border: 0;
+      border-radius: 8px;
+      padding: 8px 12px;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    #seis-install-button { background: #16a34a; color: #fff; flex: 0 0 auto; }
+    #seis-install-dismiss { background: transparent; color: #94a3b8; padding: 6px; }
+    @media (max-width: 520px) {
+      #seis-install { left: 12px; right: 12px; bottom: 12px; max-width: none; }
+      #seis-install-copy small { display: none; }
+    }
+  </style>
 
   <title>SEIS Mobile - Smart Electoral Integrity System</title>
-  <link rel="manifest" href="manifest.json">
 </head>
 <body style="margin: 0; background-color: #071426;">
+  <div id="seis-install" hidden>
+    <div id="seis-install-copy">
+      <strong>Install SEIS Mobile</strong>
+      <small id="seis-install-tip">Keep election data one tap away, even offline.</small>
+    </div>
+    <button id="seis-install-button" type="button">Install</button>
+    <button id="seis-install-dismiss" type="button" aria-label="Dismiss install prompt">&times;</button>
+  </div>
+
   <script>
-    // Register custom Service Worker for Chrome PWA installability
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', function () {
-        navigator.serviceWorker.register('sw.js').then(function (registration) {
-          console.log('SEIS PWA ServiceWorker registered with scope: ', registration.scope);
-        }).catch(function (err) {
-          console.warn('SEIS ServiceWorker registration failed: ', err);
+    (function () {
+      var banner = document.getElementById('seis-install');
+      var installButton = document.getElementById('seis-install-button');
+      var dismissButton = document.getElementById('seis-install-dismiss');
+      var tip = document.getElementById('seis-install-tip');
+      var deferredPrompt = null;
+      var dismissed = false;
+      try { dismissed = sessionStorage.getItem('seis-install-dismissed') === '1'; } catch (err) {}
+
+      var standalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+        window.navigator.standalone === true;
+
+      if ('serviceWorker' in navigator) {
+        var originalRegister = navigator.serviceWorker.register.bind(navigator.serviceWorker);
+        navigator.serviceWorker.register = function (scriptUrl, options) {
+          if (String(scriptUrl).indexOf('flutter_service_worker.js') !== -1) {
+            return originalRegister(new URL('sw.js', document.baseURI).href, options);
+          }
+          return originalRegister(scriptUrl, options);
+        };
+
+        window.addEventListener('load', function () {
+          navigator.serviceWorker
+            .register(new URL('sw.js', document.baseURI).href)
+            .catch(function (err) {
+              console.warn('SEIS service worker registration failed:', err);
+            });
+        });
+      }
+
+      function showBanner() {
+        if (!standalone && !dismissed) banner.hidden = false;
+      }
+
+      window.addEventListener('load', showBanner);
+
+      window.addEventListener('beforeinstallprompt', function (event) {
+        event.preventDefault();
+        deferredPrompt = event;
+        tip.textContent = 'Ready to install on this device.';
+        showBanner();
+      });
+
+      installButton.addEventListener('click', function () {
+        if (!deferredPrompt) {
+          tip.textContent = 'Chrome/Edge: use "Install app" in the browser menu. iPhone/iPad: tap Share, then "Add to Home Screen". HTTPS or localhost is required.';
+          return;
+        }
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then(function () {
+          deferredPrompt = null;
+          banner.hidden = true;
         });
       });
-    }
+
+      dismissButton.addEventListener('click', function () {
+        dismissed = true;
+        try { sessionStorage.setItem('seis-install-dismissed', '1'); } catch (err) {}
+        banner.hidden = true;
+      });
+
+      window.addEventListener('appinstalled', function () {
+        standalone = true;
+        deferredPrompt = null;
+        banner.hidden = true;
+      });
+    })();
   </script>
+
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

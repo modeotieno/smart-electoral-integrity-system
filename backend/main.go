@@ -13,8 +13,8 @@ import (
 	"github.com/modeotieno/smart-electoral-integrity-system/cache"
 	"github.com/modeotieno/smart-electoral-integrity-system/database"
 	"github.com/modeotieno/smart-electoral-integrity-system/handlers"
-	"github.com/modeotieno/smart-electoral-integrity-system/middleware"
 	"github.com/modeotieno/smart-electoral-integrity-system/metrics"
+	"github.com/modeotieno/smart-electoral-integrity-system/middleware"
 	"github.com/modeotieno/smart-electoral-integrity-system/websocket"
 )
 
@@ -44,6 +44,9 @@ func main() {
 	} else {
 		defer pool.Close()
 		_ = pool.Ping(context.Background())
+		if err := database.EnsureContactMessagesTable(context.Background(), pool); err != nil {
+			gin.DefaultWriter.Write([]byte("WARNING: contact_messages table setup failed: " + err.Error() + "\n"))
+		}
 		gin.DefaultWriter.Write([]byte("INFO: Database connected successfully\n"))
 	}
 
@@ -71,11 +74,11 @@ func main() {
 			}
 		}
 		c.JSON(http.StatusOK, gin.H{
-			"status":   "ok",
-			"message":  "SEIS backend is running",
-			"database": dbStatus,
+			"status":      "ok",
+			"message":     "SEIS backend is running",
+			"database":    dbStatus,
 			"environment": os.Getenv("GIN_MODE"),
-			"timestamp": time.Now().UTC().Format(time.RFC3339),
+			"timestamp":   time.Now().UTC().Format(time.RFC3339),
 		})
 	})
 
@@ -127,6 +130,9 @@ func main() {
 	router.POST("/api/results/:id/verify", middleware.RequireAuth(), middleware.RequireRole("returning_officer", "election_administrator"), resultsHandler.VerifyResult)
 	router.POST("/api/incidents", middleware.RequireAuth(), crudHandler.CreateIncident)
 	router.GET("/api/incidents", middleware.RequireAuth(), crudHandler.ListIncidents)
+
+	contactHandler := handlers.NewContactHandler(pool)
+	router.POST("/api/contact", contactHandler.Submit)
 
 	port := os.Getenv("PORT")
 	if port == "" {

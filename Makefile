@@ -1,4 +1,4 @@
-.PHONY: up down logs dev backend frontend test test-backend test-frontend test-integration
+.PHONY: up down logs dev backend frontend mobile-web mobile-up mobile-test mobile-analyze test test-backend test-frontend test-integration
 
 up:
 	docker compose up --build -d
@@ -16,6 +16,18 @@ backend:
 
 frontend:
 	cd frontend && npm run dev
+
+mobile-web:
+	cd mobile && flutter build web --release $(if $(API_BASE_URL),--dart-define=API_BASE_URL=$(API_BASE_URL),)
+
+mobile-up: mobile-web
+	docker compose up -d mobile-web
+
+mobile-test:
+	cd mobile && flutter test
+
+mobile-analyze:
+	cd mobile && flutter analyze
 
 dev: 
 	@echo "Run 'make backend' and 'make frontend' in two terminals"

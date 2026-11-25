@@ -80,6 +80,21 @@ export async function checkBackend() {
   return parseJson(res);
 }
 
+export async function sendContactMessage(payload) {
+  const res = await apiFetch(`/api/contact`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const data = await parseJson(res);
+  if (!res.ok) {
+    throw new Error(
+      data.error || `Message could not be sent (server responded HTTP ${res.status})`
+    );
+  }
+  return data;
+}
+
 function normalizeRegisterInput(input = {}) {
   const rawFullName = input.full_name ?? input.name ?? input.fullName ?? input.fullname ?? "";
   const rawEmail = input.email ?? input.username ?? "";

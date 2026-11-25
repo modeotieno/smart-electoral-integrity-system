@@ -1,14 +1,59 @@
+import { useState } from "react";
 import {
   FiMail,
   FiPhone,
   FiMapPin,
   FiArrowRight,
+  FiCheckCircle,
+  FiAlertCircle,
 } from "react-icons/fi";
 
+import { sendContactMessage } from "../../api/api";
 import "../../App.css";
 import "./Contact.css";
 
+const emptyForm = {
+  name: "",
+  email: "",
+  subject: "",
+  message: "",
+  website: "",
+};
+
 export default function ContactPage() {
+  const [form, setForm] = useState(emptyForm);
+  const [status, setStatus] = useState(null);
+  const [sending, setSending] = useState(false);
+
+  const handleChange = (event) => {
+    setForm((previous) => ({
+      ...previous,
+      [event.target.name]: event.target.value,
+    }));
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setSending(true);
+    setStatus(null);
+
+    try {
+      await sendContactMessage(form);
+      setForm(emptyForm);
+      setStatus({
+        type: "success",
+        message: "Thank you — your message has been received.",
+      });
+    } catch (error) {
+      setStatus({
+        type: "error",
+        message: error.message || "Your message could not be sent.",
+      });
+    } finally {
+      setSending(false);
+    }
+  };
+
   return (
     <div className="contact-page">
 
@@ -103,7 +148,7 @@ export default function ContactPage() {
 
           <form
             className="contact-form"
-            onSubmit={(e) => e.preventDefault()}
+            onSubmit={handleSubmit}
           >
 
             <div className="form-row">
@@ -115,8 +160,12 @@ export default function ContactPage() {
 
                 <input
                   id="name"
+                  name="name"
                   type="text"
                   placeholder="Enter your name"
+                  value={form.name}
+                  onChange={handleChange}
+                  maxLength="150"
                   required
                 />
               </div>
@@ -128,8 +177,12 @@ export default function ContactPage() {
 
                 <input
                   id="email"
+                  name="email"
                   type="email"
                   placeholder="Enter your email"
+                  value={form.email}
+                  onChange={handleChange}
+                  maxLength="150"
                   required
                 />
               </div>
@@ -143,8 +196,12 @@ export default function ContactPage() {
 
               <input
                 id="subject"
+                name="subject"
                 type="text"
                 placeholder="What would you like to ask?"
+                value={form.subject}
+                onChange={handleChange}
+                maxLength="200"
                 required
               />
             </div>
@@ -156,17 +213,44 @@ export default function ContactPage() {
 
               <textarea
                 id="message"
+                name="message"
                 rows="6"
                 placeholder="Write your message here..."
+                value={form.message}
+                onChange={handleChange}
+                minLength="10"
+                maxLength="5000"
                 required
               />
             </div>
 
+            <input
+              className="contact-honeypot"
+              type="text"
+              name="website"
+              value={form.website}
+              onChange={handleChange}
+              autoComplete="off"
+              tabIndex="-1"
+              aria-hidden="true"
+            />
+
+            {status && (
+              <div
+                className={`contact-status contact-status-${status.type}`}
+                role={status.type === "error" ? "alert" : "status"}
+              >
+                {status.type === "success" ? <FiCheckCircle /> : <FiAlertCircle />}
+                <span>{status.message}</span>
+              </div>
+            )}
+
             <button
               type="submit"
               className="contact-submit"
+              disabled={sending}
             >
-              Send Message
+              {sending ? "Sending..." : "Send Message"}
               <FiArrowRight />
             </button>
 

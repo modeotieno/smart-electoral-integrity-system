@@ -74,3 +74,25 @@ func ConnectWithRetry() (*pgxpool.Pool, error) {
 	}
 	return nil, err
 }
+
+func EnsureContactMessagesTable(ctx context.Context, pool *pgxpool.Pool) error {
+	if pool == nil {
+		return nil
+	}
+	_, err := pool.Exec(ctx, `CREATE TABLE IF NOT EXISTS contact_messages (
+		id SERIAL PRIMARY KEY,
+		name VARCHAR(150) NOT NULL,
+		email VARCHAR(150) NOT NULL,
+		subject VARCHAR(200) NOT NULL,
+		message TEXT NOT NULL,
+		ip_address VARCHAR(45),
+		email_sent BOOLEAN DEFAULT FALSE,
+		sms_sent BOOLEAN DEFAULT FALSE,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	)`)
+	if err != nil {
+		return err
+	}
+	_, err = pool.Exec(ctx, `CREATE INDEX IF NOT EXISTS idx_contact_messages_created ON contact_messages(created_at DESC)`)
+	return err
+}
